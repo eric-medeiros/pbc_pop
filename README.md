@@ -4,3 +4,5 @@ Scripts utilizados no desenvolvimento da pesquisa de monitoramento populacional 
 Próximos passos:
 - implementação das estimativas no RMark
 - colocar em 00_data arquivos exemplo (4 meses)
+
+- git config --global --add safe.directory "*"
