@@ -7,4 +7,4 @@ gitcreds_set()
 2
 
 # Novo token
-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
+#--PASTE--
