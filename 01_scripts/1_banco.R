@@ -1,4 +1,4 @@
-# Scripts para gerar os banco de dados em RDS
+# Scripts para gerar os bancos de dados em RDS
 
 # Limpando o Global Environment 
 rm(list = ls())
