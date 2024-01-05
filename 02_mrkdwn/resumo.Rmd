@@ -1,0 +1,562 @@
+---
+title: "Resumo de campo"
+author: "Projeto Boto-Cinza --- IPeC"
+date: "`r Sys.Date()`"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+data_i <- lubridate::dmy("01/08/2023")
+data_f <- lubridate::dmy("31/12/2023")
+atualiza_bd <- FALSE
+exporta_gpkg <- TRUE
+```
+
+```{r setup_pastas, include=FALSE}
+library(magrittr)
+library(dplyr)
+library(purrr)
+library(lubridate)
+library(data.table)
+library(stringr)
+library(readxl)
+library(kableExtra)
+library(tidyr)
+library(ggplot2)
+library(plotly)
+library(leaflet)
+library(sf)
+library(DT)
+
+# Definindo caminhos - INPUT
+pasta_data <- "//nas_ipec/PBC-Pesquisa/PROJETOS/ANDAMENTO/01_FOTOID"
+pasta_banco <- paste0(pasta_data, "/02_ANALISE/04_BANCO_DE_DADOS")
+arquivo_banco <- paste0(pasta_banco, "/banco_fotoID.rds")
+arquivo_tempo <- paste0(pasta_banco, "/tempo_fotoID.rds")
+pasta_campo <- paste0(pasta_data, "/01_CAMPO")
+arquivo_excel <- paste0(pasta_campo, "/02_EXCEL/populacional_PBC.xlsx")
+pasta_scan <- paste0(pasta_campo, "/01_SCAN")
+pasta_gps <- paste0(pasta_campo, "/03_GPS")
+pasta_sonda <- paste0(pasta_campo, "/04_SONDA")
+pasta_evidencias <- paste0(pasta_campo, "/05_EVIDENCIAS")
+
+# Definindo caminhos - OUTPUT
+arquivo_gpkg <- paste0(pasta_data, "/02_ANALISE/02_BASE_GEO/FOTO_", data_i, "_", data_f, ".gpkg")
+```
+
+```{r dados_banco, include=FALSE}
+if (atualiza_bd == TRUE) {
+  source("01_scripts/salva_rds.R")
+  salva_rds(pasta_data)
+  bd <- read_rds(arquivo_banco)
+  tempo <- read_rds(arquivo_tempo)
+} else {
+  bd <- readr::read_rds(arquivo_banco)
+  tempo <- readr::read_rds(arquivo_tempo)
+}
+```
+
+```{r dados_resumo, include=FALSE}
+res_rotas <-
+  bd$rota %>%
+  filter(data_rota >= data_i,
+         data_rota <= data_f) %>% 
+  st_as_sf(coords = c("lng","lat")) %>%
+  group_by(saida) %>%
+  st_set_crs(4326) %>%
+  nest() %>%
+  transmute(T_BARCO = as.period(map_vec(data, ~last(.x$datahora_ROTA)) - map_vec(data, ~first(.x$datahora_ROTA))),
+            KM = map_dbl(data, ~st_length(st_cast(st_combine(.),"MULTILINESTRING"))/1000))
+
+res_avis <- 
+  bd$avistagens %>%
+  mutate(tempo_grupo = datahora_F - datahora_I,
+         tam_grupo = nafill(tam_grupo, fill = 0L),
+         tam_min = nafill(tam_min, fill = 0L),
+         tam_max = nafill(tam_max, fill = 0L)) %>%
+  rowwise() %>%
+  mutate(tam_est = sum(tam_grupo, mean(c(tam_min, tam_max)))) %>%
+  group_by(saida) %>%
+  summarise(.groups = "keep",
+            BOTOS = round(sum(tam_est), 0),
+            T_BOTO = seconds_to_period(sum(tempo_grupo, na.rm = TRUE)),
+            GRUPOS = n(),
+            FOTOS = sum(num_fotos, na.rm = TRUE))
+
+res_id <- 
+  bd$identificacoes %>%
+  group_by(saida) %>%
+  reframe(IDs = n_distinct(ID))
+
+res_bd <- 
+  bd$saidas %>%
+  filter(data >= data_i,
+         data <= data_f) %>%
+  left_join(res_rotas, by = "saida") %>%
+  left_join(res_avis, by = "saida") %>%
+  left_join(res_id, by = "saida") %>%
+  ungroup() %>%
+  select(SAIDA = saida,
+         DATA = data,
+         KM,
+         T_BARCO,
+         T_BOTO,
+         GRUPOS,
+         BOTOS,
+         FOTOS,
+         LITROS = litros_consumidos,
+         IDs) %>%
+  arrange(DATA)
+
+res_bd$DATA <- res_bd$DATA %>% format("%d/%m/%Y")
+res_bd$KM <- round(res_bd$KM, 1) %>% str_replace_all("\\.", ",")
+res_bd$LITROS <- str_replace_all(res_bd$LITROS, "\\.", ",")
+
+res_bd$T_BOTO <-  paste0(str_pad(lubridate::hour(res_bd$T_BOTO), 2, pad = "0"), ":",
+                      str_pad(lubridate::minute(res_bd$T_BOTO), 2, pad = "0"), ":",
+                      str_pad(lubridate::second(res_bd$T_BOTO), 2, pad = "0"))
+
+res_bd$T_BARCO <-  paste0(str_pad(lubridate::hour(res_bd$T_BARCO), 2, pad = "0"), ":",
+                       str_pad(lubridate::minute(res_bd$T_BARCO), 2, pad = "0"),":",
+                       str_pad(lubridate::second(res_bd$T_BARCO), 2, pad = "0"))
+
+res_bd$data <- dmy(res_bd$DATA)
+```
+
+```{r dados_excel, include=FALSE}
+# Pegar os dados de cada aba do excel filtrando entre as datas_i e data_f
+datas_saidas <- 
+  read_excel(arquivo_excel, sheet = "saidas", col_types = c("text", "date", "text", "text", "text", "text", "text", "text", "text", "text")) %>%
+  mutate(data = ymd(data)) %>%
+  filter(data > data_i, data < data_f) %>%
+  select(data)
+
+datas_amostragens <- 
+  read_excel(arquivo_excel, sheet = "amostragens", col_types = c("text", "date", "text", "text", "text", "text", "text")) %>%
+  mutate(data = ymd(data)) %>%
+  filter(data > data_i, data < data_f) %>%
+  group_by(data) %>%
+  summarise(amostragens = n())
+
+datas_clima <- 
+  read_excel(arquivo_excel, sheet = "climas", col_types = c("text", "date", "text", "text", "text", "text", "text", "text", "text", "text", "text")) %>%
+  mutate(data = ymd(data)) %>%
+  filter(data > data_i, data < data_f) %>%
+  group_by(data) %>%
+  summarise(climas = n())
+
+datas_avistagens <- 
+  read_excel(arquivo_excel, sheet = "avistagens", col_types = c("text", "date", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text")) %>%
+  mutate(data = ymd(data)) %>%
+  filter(data > data_i, data < data_f) %>%
+  group_by(data) %>%
+  summarise(avistagens = n())
+
+datas_pausa <- 
+  read_excel(arquivo_excel, sheet = "pausas", col_types = c("text", "date", "text", "text", "text")) %>%
+  mutate(data = ymd(data)) %>%
+  filter(data > data_i, data < data_f) %>%
+  group_by(data) %>%
+  summarise(pausas = n())
+
+datas_wpextra <- 
+  read_excel(arquivo_excel, sheet = "wps_extra", col_types = c("text", "date", "text", "date", "text", "text", "text", "text")) %>%
+  mutate(data = ymd(data)) %>%
+  filter(data > data_i, data < data_f) %>%
+  group_by(data) %>%
+  summarise(wps_extra = n())
+
+datas_ids <- 
+  read_excel(arquivo_excel, sheet = "identificacoes", col_types = c("skip", "text", "date", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text"), skip = 4) %>%
+  mutate(data = ymd(data)) %>%
+  filter(data > data_i, data < data_f) %>%
+  group_by(data) %>%
+  summarise(ids = n())
+
+res_abas <- datas_saidas %>%
+  left_join(datas_amostragens, by = "data") %>%
+  left_join(datas_clima, by = "data") %>%
+  left_join(datas_avistagens, by = "data") %>%
+  left_join(datas_pausa, by = "data") %>%
+  left_join(datas_wpextra, by = "data") %>%
+  left_join(datas_ids, by = "data") %>%
+  replace(is.na(.), 0)
+```
+
+```{r dados_arquivos, include=FALSE}
+info_scan <- 
+  tibble(arquivo_scan = list.files(pasta_scan, pattern = "^.{14}.pdf")) %>%
+  mutate(data = ymd(str_sub(arquivo_scan,5,14)),
+         saida = str_sub(arquivo_scan, 1,3)) %>%
+  filter(data > data_i, data < data_f) %>%
+  select(saida, data, arquivo_scan)
+
+info_gps <- 
+  tibble(pasta = list.files(pasta_gps, pattern = ".{14}"),
+         caminho = list.files(pasta_gps, pattern = ".{14}", full.names = TRUE)) %>%
+  mutate(data = ymd(str_sub(pasta,5,14)),
+         saida = str_sub(pasta, 1,3)) %>%
+  filter(data > data_i, data < data_f) %>%
+  rowwise() %>%
+  mutate(arquivo_trajecto = list.files(caminho, pattern = "Trajecto_\\d{4}-\\d{2}-\\d{2} \\d{6}.gpx"),
+         arquivo_wp = list.files(caminho, pattern = "Pontos de passagem_\\d{2}-[A-Z]{3}-\\d{2}.gpx")) %>%
+  select(saida, data, arquivo_trajecto, arquivo_wp)
+
+info_sonda <- 
+  tibble(pasta = list.files(pasta_sonda, pattern = ".{14}"),
+         caminho = list.files(pasta_sonda, pattern = ".{14}", full.names = TRUE)) %>%
+  mutate(data = ymd(str_sub(pasta,5,14)),
+         saida = str_sub(pasta, 1,3)) %>%
+  filter(data > data_i, data < data_f) %>%
+  rowwise() %>%
+  mutate(arquivo_sonda = list.files(caminho, pattern = ".xls")) %>%
+  select(saida, data, arquivo_sonda)
+
+info_evidencias <- 
+  tibble(pasta = list.files(pasta_evidencias, pattern = ".{14}"),
+         caminho = list.files(pasta_evidencias, pattern = ".{14}", full.names = TRUE)) %>%
+  mutate(data = ymd(str_sub(pasta,5,14)),
+         saida = str_sub(pasta, 1,3)) %>%
+  filter(data > data_i, data < data_f) %>%
+  rowwise() %>%
+  mutate(n_evidencias = length(list.files(caminho, pattern = "JPG|jpg|JPEG|jpeg"))) %>%
+  select(saida, data, n_evidencias)
+
+res_arq <- datas_saidas %>%
+  left_join(info_scan, by = "data") %>%
+  left_join(info_sonda, by = c("saida","data")) %>%
+  left_join(info_gps, by = c("saida","data")) %>%
+  left_join(info_evidencias, by = c("saida","data"))
+```
+
+```{r tabelas_dados, include=FALSE}
+res <-
+  res_bd %>%
+  full_join(res_abas, by = "data", keep = FALSE) %>%
+  full_join(res_arq, by = "data", keep = FALSE) %>%
+  select(-data, -saida)
+
+sketch <-  htmltools::withTags(table(class = "display",
+                                     thead(tr(th(rowspan = 2, 'SAIDA'),
+                                              th(colspan = 10, 'BANCO DE DADOS'),
+                                              th(colspan = 6, 'ABAS DO EXCEL'), 
+                                              th(colspan = 5, 'ARQUIVOS')), 
+                                           tr(lapply(colnames(res)[-1], th)))))
+
+tab_res <- 
+  datatable(res,
+            extensions = "Buttons",
+            options = list(
+              dom = 'Bfrtip',
+              buttons = 'copy',
+              pageLength = 12,
+              autoWidth = TRUE),
+            container = sketch,
+            rownames = FALSE) 
+
+res_res <- 
+  res %>%
+  summarise(Saidas = n(),
+            km = sum(as.numeric(str_replace(KM, ",", "."))),
+            Tempo_barco = as.character(seconds_to_period(sum(period_to_seconds(hms(T_BARCO))))),
+            Tempo_boto = as.character(seconds_to_period(sum(period_to_seconds(hms(T_BOTO)), na.rm = TRUE))) %>% suppressWarnings(),
+            Grupos = sum(as.numeric(GRUPOS), na.rm = TRUE),
+            Animais = sum(as.numeric(BOTOS), na.rm = TRUE),
+            Fotos = sum(as.numeric(FOTOS), na.rm = TRUE))
+
+tab_res_res <- 
+  res_res %>%
+  datatable(extensions = 'Buttons',
+            options = list(dom = 'Bfrtip',
+                           buttons = 'copy',
+                           columnDefs = list(list(className = 'dt-right', targets = "_all"))),
+            rownames = FALSE)
+
+```
+
+```{r gpkg_rotas, include=FALSE, echo=FALSE}
+rotas <-
+  bd$rotas %>%
+  filter(datahora_ROTA >= data_i,
+         datahora_ROTA <= data_f,
+         tipo != "F1",
+         tipo != "F2") %>%
+  group_by(saida) %>%
+  filter(!str_detect(tipo, pattern = "^D")) %>%
+  sfheaders::sf_linestring(x = "lng",
+                           y = "lat",
+                           linestring_id = "saida",
+                           keep = TRUE) %>%
+  st_set_crs(4326)
+
+if (exporta_gpkg) {
+  st_write(rotas, dsn = arquivo_gpkg, layer = "rotas", append = FALSE)
+}
+```
+
+```{r gpkg_pontos, include=FALSE}
+pontos <-
+  bd$avistagens %>%
+  filter(data >= data_i,
+         data <= data_f) %>%
+  group_by(saida) %>%
+  select(-wp_I, -datahora_I, -wp_F, -datahora_F, -lng_F, -lat_F) %>%
+  st_as_sf(coords = c("lng_I", "lat_I")) %>%
+  st_set_crs(4326)
+
+if (exporta_gpkg) {
+  st_write(pontos, dsn = arquivo_gpkg, layer = "pontos", append = FALSE)
+}
+```
+
+```{r dados_mapa, include=FALSE}
+rotas$linha <- rep(as.integer(NA), nrow(rotas))
+lag_tipo = lag(rotas$tipo)
+  
+for (i in seq(nrow(rotas))) {
+  if (is.na(lag_tipo[i])) {
+    rotas$linha[i] <- 1
+  } else if (rotas$tipo[i] == lag_tipo[i]) {
+    rotas$linha[i] <- rotas$linha[i - 1]
+  } else if (rotas$tipo[i] != lag_tipo[i]) {
+    rotas$linha[i] <- rotas$linha[i - 1] + 1
+  }
+}
+
+m <- leaflet() %>%
+  addProviderTiles('Esri.WorldImagery', group = "Satelite") %>%
+  addProviderTiles('Stamen.TonerLite', group = "Toner Lite") %>%
+  setView(-47.899226, -24.979645, zoom = 11)
+
+for (s in unique(rotas$saida)) {
+  rota_dia <- rotas %>% filter(saida == s)
+  for (l in unique(rota_dia$linha)) {
+    rota_linha <- rota_dia %>% filter(linha == l)
+    rota <- rota_linha %>% st_as_sf(coords = c("lng", "lat")) %>% st_combine() %>% st_cast("LINESTRING") %>% st_set_crs(4326)
+    tipo <- first(rota_linha$tipo)
+    
+    if (str_detect(tipo, "D")) {
+      m <- m %>% addPolylines(data = rota, group = paste(s, "-", first(rota_linha$data_rota)), color = "blue", weight = 3, opacity = 0.2)
+    } else if (str_detect(tipo, "G")) {
+      m <- m %>% addPolylines(data = rota, group = paste(s, "-", first(rota_linha$data_rota)), color = "orange", weight = 3, opacity = 0.5)
+    } else if (str_detect(tipo, "A")) {
+      m <- m %>% addPolylines(data = rota, group = paste(s, "-", first(rota_linha$data_rota)), color = "darkblue", weight = 3, opacity = 0.5)
+    }
+  }
+}
+
+m <- 
+  m %>%
+  addLayersControl(
+    baseGroups = c("Toner Lite", "Satelite"),
+    overlayGroups = paste(rotas %>% pull(saida), "-",  rotas %>% pull(data_rota)),
+    options = layersControlOptions(collapsed = FALSE))
+
+```
+
+```{r dados_gráfico_curva, include=FALSE}
+historico_dia <- bd$identificacoes %>%
+  group_by(ID) %>%
+  mutate(avis = 1L) %>%
+  dplyr::select(ID, data, avis) %>%
+  na.omit() %>%
+  arrange(data)
+
+dados_hist <- historico_dia %>%
+  pivot_wider(names_from = data,
+              values_from = avis,
+              values_fn = list(avis = mean),
+              values_fill = 0) %>%
+  ungroup() 
+
+des_cap <- Rcapture::descriptive(data.matrix(dados_hist[,-1]))
+
+row.names(des_cap$base.freq) <- NULL
+
+
+data <- names(dados_hist[,-1])
+id_novos <- des_cap$base.freq[,"ui"]
+id_saida <- des_cap$base.freq[,"ni"]
+
+dados <- tibble(data,id_novos,id_saida) %>% mutate(id_novos_cum = cumsum(id_novos)) 
+
+gc <- ggplot(data = dados, aes(x = data, group = 1)) +
+  geom_point(aes(y = id_novos_cum, color = "Cumulativa")) +
+  geom_line(aes(y = id_novos_cum,  color = "Cumulativa")) +
+  geom_point(aes(y = id_saida, color = "Diária")) +
+  geom_line(aes(y = id_saida,  color = "Diária")) +
+  geom_hline(aes(yintercept = mean(id_saida), color = "Diária")) + 
+  labs(x = "Data", y = "Número de identificações") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 90)) +
+  scale_color_manual(name = "Curvas",
+                     breaks = c("Cumulativa", "Diária"),
+                     values = c("Cumulativa" = "blue", "Diária" = "lightblue"),
+                     labels = c("Cumulativa", "Diária"),
+                     guide = "legend")
+```
+
+Básico (com filtro)
+===================================== 
+
+Row {data-height=300 .tabset .tabset-pills}
+-----------------------------------------------------------------------
+
+### RESUMO por saida
+```{r tabela_resumo_saida, echo=FALSE}
+tab_res
+```
+
+### RESUMO por período
+```{r tabela_resumo_periodo, echo=FALSE}
+tab_res_res
+```
+
+### Saidas
+```{r saida}
+bd$saidas %>%
+  filter(data >= data_i,
+         data <= data_f) %>%
+  kbl() %>%
+  kable_classic(c("hover")) %>%
+  scroll_box(height = "100%")
+```
+
+### Amostragens
+```{r amostragens}
+bd$amostragens %>%
+  filter(data >= data_i,
+         data <= data_f) %>%
+  kbl() %>%
+  kable_classic(c("hover")) %>%
+  scroll_box(height = "100%")
+```
+
+### Climas
+```{r climas}
+bd$climas %>%
+  filter(data >= data_i,
+         data <= data_f) %>%
+  kbl() %>%
+  kable_classic(c("hover")) %>%
+  scroll_box(height = "100%")
+```
+
+### Avistagens
+```{r avistagens}
+bd$avistagens %>%
+  filter(data >= data_i,
+         data <= data_f) %>%
+  kbl() %>%
+  kable_classic(c("hover")) %>%
+  scroll_box(height = "100%")
+```
+
+### Pausas
+```{r pausas}
+bd$pausas %>%
+  filter(data >= data_i,
+         data <= data_f) %>%
+  kbl() %>%
+  kable_classic(c("hover")) %>%
+  scroll_box(height = "100%")
+```
+
+### Identificações
+```{r identificacoes}
+bd$identificacoes %>%
+  filter(data >= data_i,
+         data <= data_f) %>%
+  kbl() %>%
+  kable_classic(c("hover")) %>%
+  scroll_box(height = "100%")
+```
+
+### WPs
+```{r wps}
+bd$wps %>%
+  filter(datahora >= data_i,
+         datahora <= data_f) %>%
+  kbl() %>%
+  kable_classic(c("hover")) %>%
+  scroll_box(height = "100%")
+```
+
+### Rotas
+```{r rotas}
+bd$rotas %>%
+  filter(datahora_ROTA >= data_i,
+         datahora_ROTA <= data_f) %>%
+  kbl() %>%
+  kable_classic(c("hover")) %>%
+  scroll_box(height = "100%")
+```
+
+### Sondas
+```{r sonda}
+bd$sonda %>%
+  filter(datahora_SONDA >= data_i,
+         datahora_SONDA <= data_f) %>%
+  kbl() %>%
+  kable_classic(c("hover")) %>%
+  scroll_box(height = "100%")
+```
+
+Row {data-height=700}
+-----------------------------------------------------------------------
+
+### MAPA
+```{r mapa}
+m
+```
+
+Identificações totais
+===================================== 
+
+Row {data-height=500}
+-----------------------------------------------------------------------
+### IDs --- Cumulativo e diário
+```{r gráfico_curva_exibe, echo=FALSE, message=FALSE, warning=FALSE}
+gc %>% ggplotly()
+```
+
+### Outro grafico
+
+### Infos gerais
+
+``` {r info_atualização}
+if (atualiza_bd == TRUE) {
+  cat("-> Neste resumo HOUVE atualização do banco de dados. Se quiser desabilitar, mexer no arquivo markdown \n\n")
+} else {
+  cat("-> Neste resumo NÃO HOUVE atualização do banco de dados. Se quiser habilitar, mexer no arquivo markdown \n\n")
+}
+
+if (exporta_gpkg == TRUE) {
+  cat("-> ARQUIVO *.gpkg de pontos e rotas exportado em:\n\n", arquivo_gpkg)
+} else {
+  cat("-> Sem arquivo *.gpkg atualizado")
+}
+
+cat("-> Última atualização do banco de dados no dia ", format(tempo$datahora_banco, "%d/%m/%Y"), " às ", format(tempo$datahora_banco, "%H:%M"), "\n\n",
+    "-> Os tempos (s) foram: -> LEITURA EXCEL: ", tempo$tempo_excel %>% round(1), "\n",
+    "                        -> LEITURA WPS:   ", tempo$tempo_wps %>% round(1), "\n",
+    "                        -> LEITURA ROTAS: ", tempo$tempo_rotas %>% round(1), "\n",
+    "                        -> LEITURA SONDA: ", tempo$tempo_sonda %>% round(1), "\n",
+    "                        -> LEITURA FOTOS: ", tempo$tempo_fotos %>% round(1), "\n",
+    "                        -> JUNÇÃO GERAL:  ", tempo$tempo_junta %>% round(1), "\n",
+    "                        -> TEMPO TOTAL:   ", tempo$tempo_geral %>% round(1), "\n\n",
+    "-> Filtro aplicado à aba 'Básico': ", format(data_i, "%d/%m/%Y"), "--", format(data_f, "%d/%m/%Y"),
+    sep = "")
+```
+
+Row {data-height=500}
+-----------------------------------------------------------------------
+### Coisas futuras a entrar
+
+- Gráfico de barras, N x freq
+- Lista últimos 10 IDs com data
+- Lista últimos 10 ReIDs com data_ReID, dataID 
+- Lista top 10 IDs com N, data_ID, ultima data_ReID
