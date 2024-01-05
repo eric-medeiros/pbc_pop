@@ -1,6 +1,6 @@
 # função para leitura dos EXIF nas fotos
 
-le_fotos <- function(pasta_data) {
+le_fotos <- function ( pasta_data ) {
   library(stringr)
   library(exifr)
   library(dplyr)
@@ -9,9 +9,9 @@ le_fotos <- function(pasta_data) {
   library(tibble)
   library(tidyr)
   
-  le_pasta_ID <- function(pasta_ID) {
+  le_pasta_ID <- function( pasta_ID ) {
     
-    extrair_exif <- function(caminho_arquivos) {
+    extrair_exif <- function( caminho_arquivos ) {
       
       ID <- str_extract(caminho_arquivos, "\\bCN\\w+")
       arquivo_sub <- str_extract(caminho_arquivos, "\\bE.+\\.(jpg|JPG|jpeg|JPEG)\\b")
@@ -25,7 +25,7 @@ le_fotos <- function(pasta_data) {
       exif_info <- read_exif(caminho_arquivos, tags = tags) %>%
         transmute("lng" = GPSLongitude,
                   "lat" = GPSLatitude,
-                  "datahora" = ymd_hms(CreateDate, tz = Sys.timezone()) %>% as.character.Date()) %>%
+                  "datahora" = ymd_hms(CreateDate)) %>%
         bind_cols("exp" = exp,
                   "grupo" = grupo,
                   "ID" = ID,
@@ -91,20 +91,19 @@ le_fotos <- function(pasta_data) {
   dados_IDs <- lista_caminhos_pastas_ID %>% map_dfr(le_pasta_ID)
   tbl_msg <- dados_IDs %>% ungroup %>% count(status)
   
-  # cat("-> ", nrow(dados_IDs), " IDs (", nrow(unnest(dados_IDs, cols = data))," identificações)\n",
-  #     "-------------------------------------\n",
-  #     tbl_msg[[1,2]], "\tcom o ", tbl_msg[[1,1]], "\n",
-  #     if (nrow(tbl_msg) > 1) {paste0(tbl_msg[[2,2]], "\tcom o ", tbl_msg[[2,1]], "\n")},
-  #     if (nrow(tbl_msg) > 2) {paste0(tbl_msg[[3,2]], "\tcom o ", tbl_msg[[3,1]], "\n")},
-  #     if (nrow(tbl_msg) > 3) {paste0(tbl_msg[[4,2]], "\tcom o ", tbl_msg[[4,1]], "\n")},
-  #     sep = "")
+  cat("-> ", nrow(dados_IDs), " IDs (", nrow(unnest(dados_IDs, cols = data))," identificações)\n",
+      "-------------------------------------\n",
+      tbl_msg[[1,2]], "\tcom o ", tbl_msg[[1,1]], "\n",
+      if (nrow(tbl_msg)>1) {paste0(tbl_msg[[2,2]], "\tcom o ", tbl_msg[[2,1]], "\n")},
+      if (nrow(tbl_msg)>2) {paste0(tbl_msg[[3,2]], "\tcom o ", tbl_msg[[3,1]], "\n")},
+      if (nrow(tbl_msg)>3) {paste0(tbl_msg[[4,2]], "\tcom o ", tbl_msg[[4,1]], "\n")},
+      sep = "")
   
   dados_fotos <- dados_IDs %>%
     select(ID, data) %>%
     unnest(cols = c(data)) %>%
     mutate(exp = as.character(exp),
-           grupo = as.character(grupo),
-           datahora = ymd_hms(datahora, tz = Sys.timezone()))
+           grupo = as.character(grupo))
   
   invisible(dados_fotos)
   

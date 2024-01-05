@@ -99,6 +99,8 @@ sub_WP <- function(pasta_data) {
   lista$WP_extras <- NULL
   lista$WPs <- WP_sub
   
+  cat("-> sub WP ok\n")
+  
   invisible(lista)
   
   return(lista)  

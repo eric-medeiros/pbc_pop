@@ -1,47 +1,45 @@
-# Função de leitura de arquivos múltiplos de WPs
-le_WPs <- function(pasta_data) {
+# Função de leitura de arquivos múltiplos de wps
+le_wps <- function(pasta_data) {
   library(data.table)
   library(purrr)
   library(abind)
   
   # Função de leitura de arquivo indivudual de *.gpx do tipo track
-  le_WP <- function(arquivo_WP) {
+  le_wp <- function(arquivo_wp) {
     library(sf)
     library(dplyr)
     library(data.table)
     library(lubridate)
     
-    WP <- st_read(arquivo_WP, layer = "waypoints", quiet = TRUE)
+    wp <- st_read(arquivo_wp, layer = "waypoints", quiet = TRUE)
     
-    saida <- suppressWarnings(as.character(as.integer(str_extract(str_split(arquivo_WP, "/"), "\\d{3}"))))
-    lng <- st_coordinates(WP)[,"X"]
-    lat <- st_coordinates(WP)[,"Y"]
+    saida <- suppressWarnings(as.character(as.integer(str_extract(str_split(arquivo_wp, "/"), "\\d{3}"))))
+    lng <- st_coordinates(wp)[,"X"]
+    lat <- st_coordinates(wp)[,"Y"]
     
-    WP <- WP %>%
+    wp <- wp %>%
       as_tibble() %>%
       transmute("saida" = saida,
-                "datahora" = ymd_hms(time),
-                "WP" = name,
+                "datahora" = as_datetime(time, tz = Sys.timezone()),
+                "wp" = name,
                 "lng" = lng,
                 "lat" = lat)
     
-    return(WP)
+    return(wp)
   }
   
   caminho_pasta_gps <- paste(pasta_data, "/01_CAMPO/03_GPS", sep = "")
   
   # Listagem dos arquivos *.gpx da pasta_GPS
-  lista_arquivos_WP <- list.files( list.dirs( path = caminho_pasta_gps,
-                                               recursive = FALSE,
-                                               full.names = TRUE),
+  lista_arquivos_wp <- list.files( list.dirs( path = caminho_pasta_gps,
+                                              recursive = FALSE,
+                                              full.names = TRUE),
                                    recursive = FALSE,
                                    full.names = TRUE,
                                    pattern = "Pontos")
   
-  # Aplicando a função le_WP para todos arquivos da lista lista_arquivos_WP
-  dados_WP <- lista_arquivos_WP %>% map_dfr(le_WP)
-  
-  invisible(dados_WP)
-  
-  return(dados_WP)
+  # Aplicando a função le_wp para todos arquivos da lista lista_arquivos_wp
+  dados_wps <- lista_arquivos_wp %>% map_dfr(le_wp)
+
+  return(dados_wps)
 }

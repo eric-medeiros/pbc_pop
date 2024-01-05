@@ -5,7 +5,7 @@ junta_sonda <- function (lista, dados_sonda) {
   # Juntando a sonda toda 
   lista$sonda <- 
     lista$avistagens %>%
-    select(saida,grupo,datahora_I, datahora_F) %>%
+    select(saida, grupo, datahora_I, datahora_F) %>%
     right_join(dados_sonda,
                by = join_by(saida,
                             datahora_I <= datahora_SONDA,
@@ -13,7 +13,9 @@ junta_sonda <- function (lista, dados_sonda) {
     group_by(saida,grupo) %>%
     arrange(datahora_SONDA) %>%
     ungroup() %>%
-    select(saida, grupo, datahora_SONDA, Temp, Sal, OD, Turb, pH, Pres, lng, lat)
+    select(saida, grupo, datahora_SONDA, Temp, Sal, OD, Turb, pH, Pres, lng, lat, arquivo)
+  
+  cat("-> sonda ok\n")
   
   invisible(lista)
   

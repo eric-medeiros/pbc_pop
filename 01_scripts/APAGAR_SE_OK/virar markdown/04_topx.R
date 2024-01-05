@@ -1,7 +1,34 @@
-# Scripts para gerar os bancos de dados em RDS
+# TOP X individuos no historico de captura
 
 # Limpando o Global Environment 
 rm(list = ls())
+
+
+library(magrittr)
+library(dplyr)
+library(purrr)
+library(lubridate)
+library(data.table)
+
+pasta_proj <- rprojroot::find_rstudio_root_file()
+
+bd <- readRDS(paste0(pasta_proj,"/03_export/bd.rds"))
+
+bd
+
+data_i <- dmy("01/12/2022")
+data_f <- dmy("31/07/2023")
+
+
+
+
+
+
+
+
+
+
+
 
 # Pegando a pasta do projeto - vai ser diferente em cada PC, mas ele acha sozinho
 pasta_proj <- rprojroot::find_rstudio_root_file()

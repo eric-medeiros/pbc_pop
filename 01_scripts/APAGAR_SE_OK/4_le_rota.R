@@ -21,13 +21,14 @@ le_rota <- function(pasta_data) {
     rota_pontos <- rota_pontos %>%
       transmute(saida = str_extract(arquivo_rota, "(?<=/)\\d{3}(?=_)") %>% as.integer() %>% as.character(),
                 datahora_ROTA = ymd_hms(time),
-                lng = st_coordinates(.)[,"X"],
-                lat = st_coordinates(.)[,"Y"],
                 dist_p_prox = st_distance(geometry, lead(geometry), by_element = TRUE),
                 tempo_p_prox = lead(time)-time,
                 data_rota = as.character.Date(ymd(str_extract(arquivo_rota, "\\d{4}_\\d{2}_\\d{2}"))),
+                lng = st_coordinates(.)[,"X"],
+                lat = st_coordinates(.)[,"Y"],
                 arquivo = arquivo_rota) %>%
-      as_tibble()
+      as_tibble() %>%
+      select(-geometry)
     
     return(rota_pontos)
   }

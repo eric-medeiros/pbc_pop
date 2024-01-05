@@ -20,7 +20,9 @@ junta_rota <- function (lista, dados_rotas) {
     mutate(amostragem = !is.na(datahora_I_amos)) %>%
     select(-datahora_I_amos, -datahora_F_amos, -datahora_I_avis, -datahora_F_avis) %>%
     arrange(datahora_ROTA) %>%
-    select(saida, grupo, amostragem, datahora_ROTA, lng, lat, dist_p_prox, tempo_p_prox, data_rota, arquivo, geometry)
+    select(saida, grupo, amostragem, datahora_ROTA, dist_p_prox, tempo_p_prox, data_rota, lng, lat, arquivo)
+  
+  cat("-> rotas ok\n")
   
   invisible(lista)
   
