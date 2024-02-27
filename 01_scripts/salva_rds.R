@@ -64,3 +64,4 @@ salva_rds <- function(pasta_data = "//nas_ipec/PBC-Pesquisa/PROJETOS/ANDAMENTO/0
   write_rds(x = tempos,
             file = arquivo_tempo)
 }
+
