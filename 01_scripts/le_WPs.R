@@ -4,7 +4,7 @@ le_wps <- function(pasta_data) {
   library(purrr)
   library(abind)
   
-  # Função de leitura de arquivo indivudual de *.gpx do tipo track
+  # Função de leitura de arquivo individual de *.gpx do tipo track
   le_wp <- function(arquivo_wp) {
     library(sf)
     library(dplyr)
@@ -19,27 +19,29 @@ le_wps <- function(pasta_data) {
     
     wp <- wp %>%
       as_tibble() %>%
-      transmute("saida" = saida,
-                "datahora" = as_datetime(time, tz = Sys.timezone()),
-                "wp" = name,
-                "lng" = lng,
-                "lat" = lat)
+      transmute(
+        saida = saida,
+        datahora = as_datetime(time, tz = Sys.timezone()),
+        wp = str_pad(name, 3, pad = "0"),
+        lng = as.numeric(lng),
+        lat = as.numeric(lat)
+      )
     
     return(wp)
   }
   
-  caminho_pasta_gps <- paste(pasta_data, "/01_CAMPO/03_GPS", sep = "")
+  caminho_pasta_gps <- file.path(pasta_data, "01_CAMPO", "03_GPS")
   
   # Listagem dos arquivos *.gpx da pasta_GPS
-  lista_arquivos_wp <- list.files( list.dirs( path = caminho_pasta_gps,
-                                              recursive = FALSE,
-                                              full.names = TRUE),
-                                   recursive = FALSE,
-                                   full.names = TRUE,
-                                   pattern = "Pontos")
+  lista_arquivos_wp <- list.files(
+    list.dirs(path = caminho_pasta_gps, recursive = FALSE, full.names = TRUE),
+    recursive = FALSE,
+    full.names = TRUE,
+    pattern = "Pontos"
+  )
   
   # Aplicando a função le_wp para todos arquivos da lista lista_arquivos_wp
   dados_wps <- lista_arquivos_wp %>% map_dfr(le_wp)
-
+  
   return(dados_wps)
 }
