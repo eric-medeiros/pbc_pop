@@ -1,14 +1,18 @@
 # Função geral de leitura de arquivos múltiplos de sonda
 le_sondas <- function(pasta_data) {
-  library(purrr)
+  suppressPackageStartupMessages({
+    library(purrr)
+  })
   
   # Função de leitura de arquivo individual *.xls da sonda
   le_sonda_arquivo <- function(arquivo_sonda) {
-    library(readxl)
-    library(magrittr)
-    library(dplyr)
-    library(lubridate)
-    library(stringr)
+    suppressPackageStartupMessages({
+      library(readxl)
+      library(magrittr)
+      library(dplyr)
+      library(lubridate)
+      library(stringr)
+    })
     
     tem_dados_sonda <- ncol(read_xls(arquivo_sonda, sheet = 2, range = "H1:H1")) != 0
     

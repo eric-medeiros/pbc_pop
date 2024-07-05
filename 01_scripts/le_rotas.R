@@ -1,19 +1,23 @@
 # Função geral de leitura de arquivos múltiplos de GPS
 le_rotas <- function(pasta_data) {
-  library(purrr)
-  library(data.table)
-  library(lubridate)
-  library(stringr)
-  library(tidyr)
-  library(dplyr)
+  suppressPackageStartupMessages({
+    library(purrr)
+    library(data.table)
+    library(lubridate)
+    library(stringr)
+    library(tidyr)
+    library(dplyr)
+  })
   
   # Função de leitura de arquivo individual de *.gpx do tipo track
   le_rota_arquivo <- function(arquivo_rota) {
-    library(sf)
-    library(dplyr)
-    library(lubridate)
-    library(stringr)
-    library(sp)
+    suppressPackageStartupMessages({
+      library(sf)
+      library(dplyr)
+      library(lubridate)
+      library(stringr)
+      library(sp)
+    })
     
     rota_pontos <-
       st_read(arquivo_rota, layer = "track_points", quiet = TRUE) %>%

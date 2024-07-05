@@ -9,7 +9,9 @@ salva_rds <- function(pasta_data = "//nas_ipec/PBC-Pesquisa/PROJETOS/ANDAMENTO/0
   source("01_scripts/le_fotos.R")
   source("01_scripts/junta_tudo.R")
   
-  library(readr)
+  suppressPackageStartupMessages({
+    library(readr)
+  })
   
   # Registra o tempo inicial geral
   inicio_geral <- Sys.time()

@@ -1,15 +1,19 @@
 # Função de leitura de arquivos múltiplos de wps
 le_wps <- function(pasta_data) {
-  library(data.table)
-  library(purrr)
-  library(abind)
+  suppressPackageStartupMessages({
+    library(data.table)
+    library(purrr)
+    library(abind)
+  })
   
   # Função de leitura de arquivo individual de *.gpx do tipo track
   le_wp <- function(arquivo_wp) {
-    library(sf)
-    library(dplyr)
-    library(data.table)
-    library(lubridate)
+    suppressPackageStartupMessages({
+      library(sf)
+      library(dplyr)
+      library(data.table)
+      library(lubridate)
+    })
     
     wp <- st_read(arquivo_wp, layer = "waypoints", quiet = TRUE)
     

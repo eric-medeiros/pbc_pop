@@ -1,12 +1,14 @@
 # Função para leitura dos EXIF nas fotos
 le_fotos <- function(pasta_data) {
-  library(stringr)
-  library(exifr)
-  library(dplyr)
-  library(lubridate)
-  library(purrr)
-  library(tibble)
-  library(tidyr)
+  suppressPackageStartupMessages({
+    library(stringr)
+    library(exifr)
+    library(dplyr)
+    library(lubridate)
+    library(purrr)
+    library(tibble)
+    library(tidyr)
+  })
   
   le_pasta_ID <- function(pasta_ID) {
     

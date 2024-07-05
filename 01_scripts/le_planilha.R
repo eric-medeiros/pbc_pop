@@ -1,8 +1,10 @@
 le_planilha <- function(pasta_data) {
-  library(readxl)
-  library(dplyr)
-  library(lubridate)
-  library(stringr)
+  suppressPackageStartupMessages({
+    library(readxl)
+    library(dplyr)
+    library(lubridate)
+    library(stringr)
+  })
   
   arquivo_excel <- file.path(pasta_data, "01_CAMPO", "02_EXCEL", "populacional_PBC.xlsx")
   
