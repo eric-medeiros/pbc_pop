@@ -1,5 +1,5 @@
 # Função geral de leitura de arquivos múltiplos de sonda
-le_sondas <- function(pasta_data) {
+bd_le_sondas <- function(pasta_data) {
   suppressPackageStartupMessages({
     library(purrr)
   })
@@ -88,6 +88,7 @@ le_sondas <- function(pasta_data) {
   )
   
   dados_sonda <- lista_arquivos_sonda %>% map_dfr(le_sonda_arquivo) %>% as_tibble()
+  cat("-> OK - leitura das sondas\n")
   
   return(dados_sonda)
 }

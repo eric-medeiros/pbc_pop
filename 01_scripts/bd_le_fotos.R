@@ -1,5 +1,5 @@
 # Função para leitura dos EXIF nas fotos
-le_fotos <- function(pasta_data) {
+bd_le_fotos <- function(pasta_data) {
   suppressPackageStartupMessages({
     library(stringr)
     library(exifr)
@@ -102,7 +102,7 @@ le_fotos <- function(pasta_data) {
            grupo = as.character(grupo),
            datahora = ymd_hms(datahora, tz = Sys.timezone()))
   
-  invisible(dados_fotos)
+  cat("-> OK - leitura das fotos\n")
   
   return(dados_fotos)
 }

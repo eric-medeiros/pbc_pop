@@ -1,5 +1,5 @@
 # Função geral de leitura de arquivos múltiplos de GPS
-le_rotas <- function(pasta_data) {
+bd_le_rotas <- function(pasta_data) {
   suppressPackageStartupMessages({
     library(purrr)
     library(data.table)
@@ -47,6 +47,7 @@ le_rotas <- function(pasta_data) {
   
   # Aplicando a função le_rota_arquivo para cada arquivo na lista de arquivos da pasta_GPS
   dados_rota <- lista_arquivos_rota %>% map_dfr(le_rota_arquivo)
+  cat("-> OK - leitura das rotas\n")
   
   return(dados_rota)
 }

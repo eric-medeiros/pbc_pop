@@ -1,5 +1,5 @@
 # Função de leitura de arquivos múltiplos de wps
-le_wps <- function(pasta_data) {
+bd_le_wps <- function(pasta_data) {
   suppressPackageStartupMessages({
     library(data.table)
     library(purrr)
@@ -28,7 +28,8 @@ le_wps <- function(pasta_data) {
         datahora = as_datetime(time, tz = Sys.timezone()),
         wp = str_pad(name, 3, pad = "0"),
         lng = as.numeric(lng),
-        lat = as.numeric(lat)
+        lat = as.numeric(lat),
+        arquivo_wp = arquivo_wp
       )
     
     return(wp)
@@ -38,7 +39,9 @@ le_wps <- function(pasta_data) {
   
   # Listagem dos arquivos *.gpx da pasta_GPS
   lista_arquivos_wp <- list.files(
-    list.dirs(path = caminho_pasta_gps, recursive = FALSE, full.names = TRUE),
+    path = list.dirs(caminho_pasta_gps,
+                     recursive = FALSE,
+                     full.names = TRUE),
     recursive = FALSE,
     full.names = TRUE,
     pattern = "Pontos"
@@ -46,6 +49,8 @@ le_wps <- function(pasta_data) {
   
   # Aplicando a função le_wp para todos arquivos da lista lista_arquivos_wp
   dados_wps <- lista_arquivos_wp %>% map_dfr(le_wp)
+  
+  cat("-> OK - leitura dos wps\n")
   
   return(dados_wps)
 }
