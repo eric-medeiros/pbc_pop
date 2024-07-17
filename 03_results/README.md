@@ -1,0 +1,1 @@
+Pasta para resultados: até agora banco de dados e resumo
