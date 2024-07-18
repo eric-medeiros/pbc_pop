@@ -130,13 +130,19 @@ Row {.tabset .tabset-pills}
 ### RESUMO por saida
 ```{r tabela_resumo_saida, echo=FALSE}
 # tab_res
-res$resumo_especifico
+res$resumo_especifico %>%
+  kbl() %>%
+  kable_classic(c("hover")) %>%
+  scroll_box(height = "100%")
 ```
 
 ### RESUMO por período
 ```{r tabela_resumo_periodo, echo=FALSE}
 # tab_res_res
-res$resumo_geral
+res$resumo_geral %>%
+  kbl() %>%
+  kable_classic(c("hover")) %>%
+  scroll_box(height = "100%")
 ```
 
 ### Saidas
