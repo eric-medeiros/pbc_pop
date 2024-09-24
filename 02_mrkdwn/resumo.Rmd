@@ -9,8 +9,8 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-data_i <- lubridate::dmy("01/04/2024")
-data_f <- lubridate::dmy("31/07/2024")
+data_i <- lubridate::dmy("01/08/2024")
+data_f <- lubridate::dmy("30/11/2024")
 atualiza_bd <- FALSE
 ```
 
@@ -77,48 +77,6 @@ tab_res_res <-
                            buttons = 'copy',
                            columnDefs = list(list(className = 'dt-right', targets = "_all"))),
             rownames = FALSE)
-```
-
-```{r dados_gráfico_curva, include=FALSE}
-historico_dia <- bd$identificacoes %>%
-  group_by(ID) %>%
-  mutate(avis = 1L) %>%
-  dplyr::select(ID, data, avis) %>%
-  na.omit() %>%
-  arrange(data)
-
-dados_hist <- historico_dia %>%
-  pivot_wider(names_from = data,
-              values_from = avis,
-              values_fn = list(avis = mean),
-              values_fill = 0) %>%
-  ungroup() 
-
-des_cap <- Rcapture::descriptive(data.matrix(dados_hist[,-1]))
-
-row.names(des_cap$base.freq) <- NULL
-
-
-data <- names(dados_hist[,-1])
-id_novos <- des_cap$base.freq[,"ui"]
-id_saida <- des_cap$base.freq[,"ni"]
-
-dados <- tibble(data,id_novos,id_saida) %>% mutate(id_novos_cum = cumsum(id_novos)) 
-
-gc <- ggplot(data = dados, aes(x = data, group = 1)) +
-  geom_point(aes(y = id_novos_cum, color = "Cumulativa")) +
-  geom_line(aes(y = id_novos_cum,  color = "Cumulativa")) +
-  geom_point(aes(y = id_saida, color = "Diária")) +
-  geom_line(aes(y = id_saida,  color = "Diária")) +
-  geom_hline(aes(yintercept = mean(id_saida), color = "Diária")) + 
-  labs(x = "Data", y = "Número de identificações") +
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 90)) +
-  scale_color_manual(name = "Curvas",
-                     breaks = c("Cumulativa", "Diária"),
-                     values = c("Cumulativa" = "blue", "Diária" = "lightblue"),
-                     labels = c("Cumulativa", "Diária"),
-                     guide = "legend")
 ```
 
 Tabelas (com filtro)
@@ -210,6 +168,7 @@ bd$identificacoes %>%
 bd$wps %>%
   filter(datahora >= data_i,
          datahora <= data_f) %>%
+  arrange(datahora) %>%
   kbl() %>%
   kable_classic(c("hover")) %>%
   scroll_box(height = "100%")
@@ -243,20 +202,172 @@ Mapa (com filtro)
 res$resumo_leaflet
 ```
 
-Identificações totais
+Dados Completos {.tabset}
 ===================================== 
 
-Row {data-height=500}
+Row {.tabset .tabset-pills}
 -----------------------------------------------------------------------
-### IDs --- Cumulativo e diário
-```{r gráfico_curva_exibe, echo=FALSE, message=FALSE, warning=FALSE}
-gc %>% ggplotly()
+
+```{r}
+# Função para calcular as estatísticas e retornar as tabelas
+pp_stats <- function(bd) {
+  historico_dia <- bd$identificacoes %>%
+    dplyr::select(saida, exp, ID, data) %>%
+    unique() %>% 
+    dplyr::select(ID, data) %>%
+    mutate(avis = 1L) %>%
+    arrange(data)
+  
+  dados_hist <- historico_dia %>%
+    pivot_wider(
+      names_from = data,
+      values_from = avis,
+      values_fn = list(avis = mean),
+      values_fill = 0) %>%
+    ungroup() 
+  
+  des_cap <- Rcapture::descriptive(data.matrix(dados_hist[,-1]))
+  
+  dados <- 
+    list(
+      dados_p_dia = tibble(
+        data = names(dados_hist[,-1]),
+        ids_novas = des_cap$base.freq[,"ui"],
+        ids_na_saida = des_cap$base.freq[,"ni"],
+        ids_ultimas = des_cap$base.freq[,"vi"]) %>% 
+        mutate(
+          ids_novas_cum = cumsum(ids_novas),
+          mov_avg_10 = zoo::rollmean(ids_na_saida, 10, fill = NA, align = "right"),
+          mov_avg_20 = zoo::rollmean(ids_na_saida, 20, fill = NA, align = "right")
+        ),
+      dados_p_freq = tibble(
+        cont = seq(length(des_cap$base.freq[,"fi"])),
+        freq = des_cap$base.freq[,"fi"]
+      )
+    )
+  
+  # Tabelas
+  ultimos_ids <-
+    bd$identificacoes %>%
+    filter(id_reid == "id") %>%
+    arrange(desc(data)) %>%
+    select(ID, data, lado) %>%
+    distinct()
+  
+  ultimos_reids <-
+    bd$identificacoes %>%
+    filter(id_reid == "reid") %>%
+    arrange(desc(data)) %>%
+    select(ID, data, lado) %>%
+    distinct()
+  
+  top_ids <-
+    bd$identificacoes %>%
+    select(saida, ID, data) %>%
+    unique() %>%
+    group_by(ID) %>%
+    summarise(
+      N = n(),
+      primeira_data_ID = min(data, na.rm = TRUE),
+      ultima_data_ReID = max(data, na.rm = TRUE),
+    ) %>%
+    arrange(desc(N))
+  
+  result <- 
+    list(
+      dados = dados,
+      ultimos_ids = ultimos_ids,
+      ultimos_reids = ultimos_reids,
+      top_ids = top_ids
+    )
+  return(result)
+}
 ```
 
-### Outro grafico
+```{r}
+# Função para gerar os gráficos
+pp_graphs <- function(stats) {
+  
+  # Gráfico 1: Cumulativo e Diária
+  g1 <- 
+    stats$dados$dados_p_dia %>%
+    ggplot(aes(x = data, group = 1)) +
+    geom_point(aes(y = ids_novas_cum, color = "Cumulativa")) +
+    geom_line(aes(y = ids_novas_cum, color = "Cumulativa")) +
+    geom_point(aes(y = ids_na_saida, color = "Diária")) +
+    geom_line(aes(y = ids_na_saida, color = "Diária")) +
+    geom_line(aes(y = mov_avg_10, color = "Média Móvel 10 dias"), linetype = "dashed") +
+    geom_line(aes(y = mov_avg_20, color = "Média Móvel 20 dias"), linetype = "dotted") +
+    geom_hline(aes(yintercept = mean(ids_na_saida), color = "Diária")) +
+    labs(x = "Data", y = "Número de identificações") +
+    theme_classic() +
+    theme(axis.text.x = element_text(angle = 90)) +
+    scale_color_manual(
+      name = "Curvas",
+      breaks = c("Cumulativa", "Diária", "Média Móvel 10 dias", "Média Móvel 20 dias"),
+      values = c(
+        "Cumulativa" = "blue",
+        "Diária" = "lightblue",
+        "Média Móvel 10 dias" = "green",
+        "Média Móvel 20 dias" = "orange"),
+      labels = c("Cumulativa", "Diária", "Média Móvel 10 dias", "Média Móvel 20 dias"),
+      guide = "legend")
+  
+  # Gráfico 2: Frequência de avistagens por contagem
+  g2 <- 
+    stats$dados$dados_p_freq %>%
+    slice(1:max(which(stats$dados$dados_p_freq$freq != 0))) %>%
+    ggplot(aes(x = factor(cont), y = freq)) +
+    geom_bar(stat = "identity", fill = "skyblue") +
+    labs(x = "Contagem de Avistagens", y = "Frequência") +
+    theme_classic()
+  
+  result <- list(graph_cumulativa = g1, graph_frequencia = g2)
+  
+  return(result)
+}
+```
+
+```{r include = FALSE}
+stats <- pp_stats(bd)
+graphs <- pp_graphs(stats)
+```
+
+### GRÁFICO - IDs Cumulativo e diário
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+graphs$graph_cumulativa %>% ggplotly()
+```
+
+### GRÁFICO - Frequência
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+graphs$graph_frequencia %>% ggplotly()
+```
+
+### TABELA - Últimas Ids
+```{r}
+stats$ultimos_ids %>%
+  kbl() %>%
+  kable_classic(c("hover")) %>%
+  scroll_box(height = "100%")
+```
+
+### TABELA - Últimas Reids
+```{r}
+stats$ultimos_reids %>%
+  kbl() %>%
+  kable_classic(c("hover")) %>%
+  scroll_box(height = "100%")
+```
+
+### TABELA - TOP Id+Reids
+```{r}
+stats$top_ids %>%
+  kbl() %>%
+  kable_classic(c("hover")) %>%
+  scroll_box(height = "100%")
+```
 
 ### Infos gerais
-
 ``` {r info_atualização}
 if (atualiza_bd == TRUE) {
   cat("-> Neste resumo HOUVE atualização do banco de dados. Se quiser desabilitar, mexer no arquivo markdown \n\n")
@@ -278,14 +389,14 @@ cat("-> Última atualização do banco de dados no dia ", format(bd$tempos$datah
     sep = "")
 ```
 
-Row {data-height=500}
------------------------------------------------------------------------
-### Coisas futuras a entrar
+Possíveis erros
+===================================== 
 
-- Gráfico de barras, N x freq
-- Lista últimos 10 IDs com data
-- Lista últimos 10 ReIDs com data_ReID, dataID 
-- Lista top 10 IDs com N, data_ID, ultima data_ReID
-- ?
-- Gráficos(dados copmletos) em uma função a parte, salvar
-- Tela toda para gráfico?
+### Têm no excel, mas não tem lat_long
+```{r}
+bd$identificacoes %>%
+  filter(is.na(datahora)) %>%
+  kbl() %>%
+  kable_classic(c("hover")) %>%
+  scroll_box(height = "100%")
+```

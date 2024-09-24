@@ -22,12 +22,13 @@ bd_junta_rotas <- function(dados_excel_sub, dados_rotas) {
                             !is.na(datahora_I_said) & datahora_ROTA >= datahora_I_said & datahora_ROTA <= datahora_F_said ~ "D",
                             TRUE ~ "F"))
   
-  # Função para reiniciar os contadores para cada nova saída
-  determina_tipo <- function(saida, tipo) {
+  # Função para reiniciar os contadores e duplicar pontos de encontro para evitar gaps
+  determina_tipo <- function(saida, datahora_ROTA, tipo) {
     contador_a <- 1
     contador_d <- 1
     contador_f <- 1
     sequencia_renomeada <- rep("", length(tipo))
+    duplicado <- rep(FALSE, length(tipo))
     
     for (i in seq_along(tipo)) {
       if (tipo[i] == "F") {
@@ -49,21 +50,26 @@ bd_junta_rotas <- function(dados_excel_sub, dados_rotas) {
         sequencia_renomeada[i] <- tipo[i]
       }
       
-      if (i < length(tipo) && tipo[i + 1] == "F" && tipo[i] != "F") {
-        contador_a <- 1
-        contador_d <- 1
-        contador_f <- 1
+      # Duplica o ponto de encontro entre dois tipos diferentes
+      if (i < length(tipo) && tipo[i] != tipo[i + 1]) {
+        duplicado[i + 1] <- TRUE
       }
     }
     
-    return(sequencia_renomeada)
+    # Duplicando os pontos de transição
+    df <- tibble(datahora_ROTA, tipo = sequencia_renomeada, duplicado)
+    df <- df %>%
+      mutate(datahora_ROTA = if_else(duplicado, lag(datahora_ROTA), datahora_ROTA)) %>%
+      select(-duplicado)
+    
+    return(df$tipo)
   }
   
   # Aplicando a função determina_tipo para cada saída
   dados_rotas_processadas <- dados_rotas_processadas %>%
     group_by(saida) %>%
     arrange(datahora_ROTA) %>%
-    mutate(tipo = determina_tipo(saida, tipo)) %>%
+    mutate(tipo = determina_tipo(saida, datahora_ROTA, tipo)) %>%
     ungroup()
   
   # Adicionando os resultados das rotas à lista dados_excel_sub$rotas
