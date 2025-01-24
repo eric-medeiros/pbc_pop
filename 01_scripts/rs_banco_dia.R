@@ -86,6 +86,7 @@ rs_banco_dia <- function(bd, data_i, data_f) {
     mutate(
       SAIDA = as.numeric(saida) - 59,
       DATA = format(data, "%d/%m/%Y"),
+      IDs = nafill(IDs, "const", 0L),
       data = as_date(data)
     ) %>%
     select(

@@ -9,9 +9,9 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-data_i <- lubridate::dmy("01/08/2024")
-data_f <- lubridate::dmy("30/11/2024")
-atualiza_bd <- FALSE
+data_i <- lubridate::dmy("01/01/2024")
+data_f <- lubridate::dmy("31/12/2024")
+atualiza_bd <- TRUE
 ```
 
 ```{r dados_banco, include=FALSE}
@@ -247,19 +247,19 @@ pp_stats <- function(bd) {
     )
   
   # Tabelas
-  ultimos_ids <-
-    bd$identificacoes %>%
-    filter(id_reid == "id") %>%
-    arrange(desc(data)) %>%
-    select(ID, data, lado) %>%
-    distinct()
-  
-  ultimos_reids <-
-    bd$identificacoes %>%
-    filter(id_reid == "reid") %>%
-    arrange(desc(data)) %>%
-    select(ID, data, lado) %>%
-    distinct()
+  # ultimos_ids <-
+  #   bd$identificacoes %>%
+  #   filter(id_reid == "id") %>%
+  #   arrange(desc(data)) %>%
+  #   select(ID, data, lado) %>%
+  #   distinct()
+  # 
+  # ultimos_reids <-
+  #   bd$identificacoes %>%
+  #   filter(id_reid == "reid") %>%
+  #   arrange(desc(data)) %>%
+  #   select(ID, data, lado) %>%
+  #   distinct()
   
   top_ids <-
     bd$identificacoes %>%
@@ -276,8 +276,8 @@ pp_stats <- function(bd) {
   result <- 
     list(
       dados = dados,
-      ultimos_ids = ultimos_ids,
-      ultimos_reids = ultimos_reids,
+      # ultimos_ids = ultimos_ids,
+      # ultimos_reids = ultimos_reids,
       top_ids = top_ids
     )
   return(result)
