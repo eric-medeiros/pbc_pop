@@ -1,5 +1,5 @@
 # Pegar os dados de cada aba do Excel, filtrando entre data_i e data_F
-rs_abas_dia <- function(pasta_data, data_i, data_F) {
+rs_abas_dia <- function(pasta_data, data_i, data_f) {
   suppressPackageStartupMessages({
     library(dplyr)
     library(lubridate)
@@ -12,7 +12,7 @@ rs_abas_dia <- function(pasta_data, data_i, data_F) {
   datas_saidas <- 
     read_excel(arquivo_excel, sheet = "saidas", col_types = c("text", "date", "text", "text", "text", "text", "text", "text", "text", "text")) %>%
     mutate(data = ymd(data)) %>%
-    filter(data > data_i, data < data_F) %>%
+    filter(data > data_i, data < data_f) %>%
     group_by(data) %>%
     summarise(saidas = n())
   
@@ -20,7 +20,7 @@ rs_abas_dia <- function(pasta_data, data_i, data_F) {
   datas_amostragens <- 
     read_excel(arquivo_excel, sheet = "amostragens", col_types = c("text", "date", "text", "text", "text", "text", "text")) %>%
     mutate(data = ymd(data)) %>%
-    filter(data > data_i, data < data_F) %>%
+    filter(data > data_i, data < data_f) %>%
     group_by(data) %>%
     summarise(amostragens = n())
   
@@ -28,7 +28,7 @@ rs_abas_dia <- function(pasta_data, data_i, data_F) {
   datas_clima <- 
     read_excel(arquivo_excel, sheet = "climas", col_types = c("text", "date", "text", "text", "text", "text", "text", "text", "text", "text", "text")) %>%
     mutate(data = ymd(data)) %>%
-    filter(data > data_i, data < data_F) %>%
+    filter(data > data_i, data < data_f) %>%
     group_by(data) %>%
     summarise(climas = n())
   
@@ -36,7 +36,7 @@ rs_abas_dia <- function(pasta_data, data_i, data_F) {
   datas_avistagens <- 
     read_excel(arquivo_excel, sheet = "avistagens", col_types = c("text", "date", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text")) %>%
     mutate(data = ymd(data)) %>%
-    filter(data > data_i, data < data_F) %>%
+    filter(data > data_i, data < data_f) %>%
     group_by(data) %>%
     summarise(avistagens = n())
   
@@ -44,7 +44,7 @@ rs_abas_dia <- function(pasta_data, data_i, data_F) {
   datas_pausa <- 
     read_excel(arquivo_excel, sheet = "pausas", col_types = c("text", "date", "text", "text", "text")) %>%
     mutate(data = ymd(data)) %>%
-    filter(data > data_i, data < data_F) %>%
+    filter(data > data_i, data < data_f) %>%
     group_by(data) %>%
     summarise(pausas = n())
   
@@ -52,15 +52,15 @@ rs_abas_dia <- function(pasta_data, data_i, data_F) {
   datas_wpextra <- 
     read_excel(arquivo_excel, sheet = "wps_extra", col_types = c("text", "date", "date", "text", "text", "text", "text")) %>%
     mutate(data = ymd(data)) %>%
-    filter(data > data_i, data < data_F) %>%
+    filter(data > data_i, data < data_f) %>%
     group_by(data) %>%
     summarise(wps_extra = n())
   
   # Aba "identificacoes"
   datas_ids <- 
-    read_excel(arquivo_excel, sheet = "identificacoes", col_types = c("text", "date", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text"), skip = 5) %>%
+    read_excel(arquivo_excel, sheet = "identificacoes", skip = 3, col_types = c("text", "date", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text")) %>%
     mutate(data = ymd(data)) %>%
-    filter(data > data_i, data < data_F) %>%
+    filter(data > data_i, data < data_f) %>%
     group_by(data) %>%
     summarise(ids = n())
   
