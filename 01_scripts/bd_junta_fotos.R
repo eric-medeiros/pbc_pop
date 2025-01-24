@@ -5,10 +5,10 @@ bd_junta_fotos <- function(dados_excel_sub, dados_fotos) {
   dados_identificacoes_processadas <- dados_excel_sub$identificacoes %>%
     left_join(dados_excel_sub$amostragens %>% select(exp, saida), by = "saida") %>%
     full_join(dados_fotos, by = join_by("exp", "grupo", "id" == "ID", "arquivo")) %>%
-    filter(!is.na(grupo), !is.na(id_reid), !is.na(exp)) %>%
+    filter(!is.na(grupo), !is.na(exp)) %>%
     mutate(data = as_date(data)) %>%
-    select(saida, exp, grupo, ID = id, data, datahora, lng, lat, arquivo, quali_F = quali_f, quali_M = quali_m, lado, filhote_ac, id_reid,
-           catalogo_atualizado, lado_novo, identificador, fotografa, obs, arquivo_sub, caminho)
+    select(saida, exp, grupo, ID = id, data, datahora, lng, lat, arquivo, quali_F = quali_f,
+           quali_M = quali_m, lado, filhote_ac, identificador, fotografa, obs, arquivo_sub, caminho)
   
   # Adicionando os resultados das identificações à lista dados_excel_sub$identificacoes
   dados_excel_sub$identificacoes <- dados_identificacoes_processadas %>% select(-caminho)
