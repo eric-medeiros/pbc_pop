@@ -10,7 +10,7 @@ output:
 
 ```{r setup, include=FALSE}
 data_i <- lubridate::dmy("01/01/2024")
-data_f <- lubridate::dmy("31/12/2024")
+data_f <- lubridate::dmy("31/12/2025")
 atualiza_bd <- TRUE
 ```
 
