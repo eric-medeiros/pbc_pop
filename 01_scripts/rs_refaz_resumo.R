@@ -56,9 +56,13 @@ rs_refaz_resumo <- function(pasta_data, data_i, data_f, bd) {
       Fotos = sum(as.numeric(FOTOS), na.rm = TRUE)
     )
   
-  results <- list(resumo_especifico = resumo_especifico,
-                  resumo_geral = resumo_geral,
-                  resumo_geopackage = res_geo,
-                  resumo_leaflet = res_lfl)
+  results <-
+    list(
+      resumo_especifico = resumo_especifico,
+      resumo_geral = resumo_geral,
+      resumo_geopackage = res_geo,
+      resumo_leaflet = res_lfl
+    )
+  
   return(results)
 }

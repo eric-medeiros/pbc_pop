@@ -9,7 +9,7 @@ rs_resumo <- function(pasta_outputs, data_i, data_f, pasta_data, bd) {
   arquivo_gpkg <- paste0("resumo_", data_i, "_", data_f, ".gpkg")
   caminho_gpkg <- file.path(pasta_outputs, "02_RESUMO", arquivo_gpkg)
 
-  if(!dir.exists(dirname(caminho_xls))) { dir.create(dirname(caminho_xls)) }
+  if (!dir.exists(dirname(caminho_xls))) { dir.create(dirname(caminho_xls)) }
   
   res <- rs_refaz_resumo(pasta_data, data_i, data_f, bd)
   
