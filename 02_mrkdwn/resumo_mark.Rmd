@@ -1,0 +1,147 @@
+---
+title: "Resumo de Mark"
+author: "Projeto Boto-Cinza --- IPeC"
+date: "`r Sys.Date()`"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: column
+    vertical_layout: fill
+---
+
+```{r setup}
+library(flexdashboard)
+library(tidyverse)
+library(lubridate)
+library(RMark)
+library(DT)
+
+# Parâmetros Globais
+data_i <- lubridate::dmy("01/12/2022")
+data_f <- lubridate::dmy("31/03/2025")
+atualiza_bd <- FALSE
+```
+
+```{r caminhos}
+# Caminhos
+pasta_data <- file.path("//nas_ipec", "PBC-Pesquisa", "PROJETOS", "ANDAMENTO", "01_FOTOID")
+pasta_outputs <- file.path(rprojroot::find_rstudio_root_file(), "03_results")
+```
+
+```{r dados, include=FALSE}
+source("01_scripts/bd_banco.R")
+source("01_scripts/mr_theta_global.R")
+source("01_scripts/mr_prepara_dados_mr.R")
+source("01_scripts/mr_prepara_dados_ch.R")
+source("01_scripts/mr_roda_modelos_otis.R")
+source("01_scripts/mr_analisa_modelos_otis.R")
+
+# Carregar banco
+bd <- bd_banco(pasta_outputs, atualiza_bd, pasta_data)
+theta <- mr_theta_global(bd)
+dados_mr <- mr_prepara_dados_mr(bd, data_i, data_f)
+dados_ch <- mr_prepara_dados_ch(dados_mr)
+lista_resultados_modelos <- mr_roda_modelos_otis(dados_ch)
+resumo_modelos <- mr_analisa_modelos_otis(lista_resultados_modelos)
+```
+
+# Resumo de dados
+
+Column {data-width=300}
+-------------------------------------
+
+### Dados do excel e arquivos de fotos
+```{r}
+dados_mr %>%
+  ungroup() %>%
+  select(ID, datahora, lng, lat, arquivo) %>%
+  arrange(datahora) %>%
+  mutate(lng = round(lng, 5),
+         lat = round(lat, 5)) %>%
+  datatable()
+```
+
+Column {data-width=200}
+-------------------------------------
+
+### Histórico de Captura
+```{r}
+dados_ch %>%
+  datatable()
+```
+
+# Resumo dos Modelos
+```{r resumo}
+resumo_modelos %>%
+  mutate(AICc = round(AICc, 2),
+         DeltaAICc = round(DeltaAICc, 2),
+         weight = round(weight, 2),
+         c_hat = round(c_hat, 2),
+         N = as.integer(N),
+         N_se = round(N_se, 2),
+         N_lcl = round(N_lcl, 2),
+         N_ucl = round(N_ucl, 2)) %>%
+datatable()
+```
+
+# Visualização
+```{r analise_exploratoria}
+# Gráfico de avistagens por período
+dados_mr %>% 
+  count(periodo) %>%
+  ggplot(aes(x = as.numeric(periodo), y = n)) +
+  geom_col() +
+  labs(title = "Avistagens por Período", x = "Período", y = "Número de Indivíduos")
+```
+
+# Correção via Theta
+```{r theta_correction}
+resumo_modelos %>%
+  mutate(
+    N_corr = N / theta$theta_geral,
+    N_se_corr = N_se / theta$theta_geral,
+    N_lcl_corr = N_corr - 1.96 * N_se_corr,
+    N_ucl_corr = N_corr + 1.96 * N_se_corr
+  ) %>%
+  select(Modelo_Nome, DeltaAICc, c_hat, N, N_corr, N_lcl_corr, N_ucl_corr) %>%
+  datatable()
+```
+
+# NESSE TEM:
+O processo atual implementa modelos de marcação-recaptura (Closed Population) para estimar o tamanho populacional (N) do boto-cinza, utilizando dados de avistagens entre 2022 e 2025. Foram ajustados quatro modelos (M0, Mt, Mc, Mtc) via pacote RMark, comparando desempenho via AICc e pesos de evidência. As estimativas de N são corrigidas por um theta global (θ = proporção média de indivíduos marcados nos grupos), ajustando para detectabilidade incompleta. O dashboard resume:
+
+- Tabela interativa com rankings de modelos (ΔAICc, pesos).
+
+- Gráfico de avistagens por período.
+
+- Valores de N corrigidos com intervalos de confiança (95%).
+
+- Resultados-chave incluem:
+
+  - Modelo mais parcimonioso (menor AICc) identificado.
+
+  - Estimativas de população variando entre [valor mínimo] e [valor máximo] após correção.
+
+# FUTUROS TESTES:
+1. Validação de Pressupostos:
+
+  - Testar fechamento populacional formalmente (e.g., Teste de Stanley e Richards no MARK).
+
+  - Investigar heterogeneidade individual com modelos Heterogeneity (Mh) ou métodos de remoção (e.g., modelo Chao).
+
+2. Sensibilidade e Robustez:
+
+  - Simular cenários com taxas de marcação variáveis para avaliar impacto nas estimativas.
+
+  - Testar correções alternativas para θ (e.g., θ variável por período ou grupo).
+
+3. Expansão de Modelos:
+
+  - Incluir covariáveis ambientais (e.g., esforço amostral, condições climáticas) nos parâmetros p e c.
+
+  - Explorar modelos Open Population se houver evidências de dinâmica populacional aberta.
+
+4. Diagnósticos Avançados:
+
+  - Analisar resíduos de deviance para detectar overdispersion ou viés.
+
+  - Comparar resultados com métodos não paramétricos (e.g., Jackknife).
