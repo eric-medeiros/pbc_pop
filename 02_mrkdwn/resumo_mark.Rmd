@@ -95,14 +95,17 @@ dados_mr %>%
 
 # Correção via Theta
 ```{r theta_correction}
-resumo_modelos %>%
+resumo_corrigido <- 
+  resumo_modelos %>%
   mutate(
     N_corr = N / theta$theta_geral,
     N_se_corr = N_se / theta$theta_geral,
     N_lcl_corr = N_corr - 1.96 * N_se_corr,
     N_ucl_corr = N_corr + 1.96 * N_se_corr
   ) %>%
-  select(Modelo_Nome, DeltaAICc, c_hat, N, N_corr, N_lcl_corr, N_ucl_corr) %>%
+  select(Modelo_Nome, DeltaAICc, c_hat, N, N_corr, N_lcl_corr, N_ucl_corr)
+
+resumo_corrigido %>%
   datatable()
 ```
 
@@ -120,7 +123,16 @@ O processo atual implementa modelos de marcação-recaptura (Closed Population) 
   - Modelo mais parcimonioso (menor AICc) identificado.
 
   - Estimativas de população variando entre [valor mínimo] e [valor máximo] após correção.
+  
+  - **ÍNDICE DE SUPERDISPERSÃO:  `r resumo_corrigido %>% filter(Modelo_Nome == "M0") %>% pull(c_hat)`**
+  
+  - **LIMITE SUPERIOR IC95%: `r resumo_corrigido %>% filter(Modelo_Nome == "M0") %>% pull(N_lcl_corr) %>% round(2)`**
+  
+  - **LIMITE INFERIROR IC95%: `r resumo_corrigido %>% filter(Modelo_Nome == "M0") %>% pull(N_ucl_corr) %>% round(2)`**
 
+  - **ESTIMATIVA: `r resumo_corrigido %>% filter(Modelo_Nome == "M0") %>% pull(N_corr) %>% round(2)`**
+  
+  
 # FUTUROS TESTES:
 1. Validação de Pressupostos:
 
