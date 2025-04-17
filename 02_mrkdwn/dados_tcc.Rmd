@@ -1,0 +1,409 @@
+---
+title: "Seleção de Dados para TCC 2025"
+author: "Projeto Boto-Cinza --- IPeC"
+date: "`r Sys.Date()`"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: column
+    vertical_layout: fill
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r paths}
+library(flexdashboard)
+library(stringr)
+library(lubridate)
+library(exiftoolr)
+library(dplyr)
+library(DT)
+library(xlsx)
+
+caminho_bd <- list.files(file.path("03_results", "01_BANCO"), "bd.rds", full.names = TRUE)
+bd <- readRDS(caminho_bd)
+
+caminho_pasta_dados_p_outros <- file.path("//NAS_IPeC/PBC-Pesquisa/PROJETOS/ANDAMENTO/01_FOTOID/02_ANALISE/06_DADOS_P_OUTROS_ANALISAREM")
+
+caminho_fotos_atipias <- file.path(caminho_pasta_dados_p_outros, "TCC 2 - Ori Julia - Aluna Erica","ATIPIAS")
+out_1 <- file.path(caminho_pasta_dados_p_outros, "TCC 1 - Ori Julia - Aluna Eduarda", "dados_eduarda.xlsx")
+out_2 <- file.path(caminho_pasta_dados_p_outros, "TCC 2 - Ori Julia - Aluna Erica", "dados_erica.xlsx")
+out_3 <- file.path(caminho_pasta_dados_p_outros, "TCC 3 - Ori Julia - Aluno Wesley", "dados_wesley.xlsx")
+```
+
+```{r dados_tcc1}
+# TCC 1 - Eduarda
+a_saidas_1 <-
+  bd$saidas %>%
+  select(saida, data, datahora_I, lng_I, lat_I, datahora_F, lng_F, lat_F, rota, equipe, barqueiro, obs)
+
+a_amostragens_1 <-
+  bd$amostragens %>%
+  select(saida, data, exp, datahora_I, lng_I, lat_I, datahora_F, lng_F, lat_F, rota, obs)
+
+a_climas_1 <- 
+  bd$climas %>%
+  select(saida, data, datahora_I, lng_I, lat_I, datahora_F, lng_F, lat_F, beaufort, dir_vento, veloc_vento, visibilidade, cobert_nuvens, reflexo, obs)
+
+a_avistagens_1 <- 
+  bd$avistagens %>%
+  select(
+    saida, data, grupo, oc_id, num_fotos, datahora_I, lng_I, lat_I, datahora_F, lng_F, lat_F,
+    tam_grupo, tam_min, tam_max, n_neonatos, n_infantes, n_juvenis, n_adultos, coesao, estado, obs
+  )
+```
+
+```{r dados_tcc2}
+# TCC 2 - Erica
+
+caminhos_jpg_2 <- list.files(file.path(caminho_fotos_atipias), "JPG", recursive = TRUE, full.names = TRUE)
+
+dados_arquivos_jpg_2 <- 
+  exif_read(caminhos_jpg_2, tags = c("GPSLatitude", "GPSLongitude", "CreateDate")) %>%
+  rename(lng = GPSLongitude, lat = GPSLatitude, caminho_jpg = SourceFile, datahora = CreateDate) %>%
+  mutate(
+    datahora = ymd_hms(datahora, tz = Sys.timezone()),
+    arquivo_jpg = basename(caminho_jpg),
+    exp = str_extract(arquivo_jpg, "(?<=E)\\d\\d"),
+    sai = str_extract(arquivo_jpg, "(?<=S)\\d"),
+    grupo = str_extract(arquivo_jpg, "(?<=A)\\d")
+    ) %>%
+  select(exp, sai, grupo, arquivo_jpg, datahora, lng, lat, caminho_jpg)
+
+lista_esa <- 
+  bd$amostragens %>%
+  group_by(exp) %>%
+  mutate(sai = as.character(row_number())) %>%
+  right_join(dados_arquivos_jpg_2, by = c("exp", "sai")) %>%
+  select(saida, exp, sai, grupo) %>%
+  mutate(saida_grupo = str_c(saida, "_", grupo)) %>%
+  unique()
+  
+a_saidas_2 <-
+  bd$saidas %>%
+  filter(saida %in% lista_esa$saida) %>%
+  select(saida, data, datahora_I, lng_I, lat_I, datahora_F, lng_F, lat_F, rota, equipe, barqueiro, obs)
+
+a_amostragens_2 <-
+  bd$amostragens %>%
+  filter(saida %in% lista_esa$saida) %>%
+  select(saida, data, exp, datahora_I, lng_I, lat_I, datahora_F, lng_F, lat_F, rota, obs)
+
+a_climas_2 <- 
+  bd$climas %>%
+  filter(saida %in% lista_esa$saida) %>%
+  select(saida, data, datahora_I, lng_I, lat_I, datahora_F, lng_F, lat_F, beaufort, dir_vento, veloc_vento, visibilidade, cobert_nuvens, reflexo, obs)
+
+a_avistagens_2 <- 
+  bd$avistagens %>%
+  mutate(saida_grupo = str_c(saida, "_", grupo)) %>%
+  filter(str_c(saida, "_", grupo) %in% lista_esa$saida_grupo) %>%
+  select(
+    saida, data, grupo, oc_id, num_fotos, datahora_I, lng_I, lat_I, datahora_F, lng_F, lat_F,
+    tam_grupo, tam_min, tam_max, n_neonatos, n_infantes, n_juvenis, n_adultos, coesao, estado, obs
+  )
+
+a_fotos_2 <- 
+  dados_arquivos_jpg_2 %>%
+  left_join(lista_esa, by = join_by(exp, sai, grupo)) %>%
+  select(saida, grupo, arquivo_jpg, datahora, lng, lat, exp, caminho_jpg)
+
+
+```
+
+```{r dados_tcc3}
+# TCC 3 - Wesley
+top_ids <-
+  bd$identificacoes %>%
+  select(ID, saida, grupo) %>%
+  unique() %>%
+  group_by(ID) %>%
+  count() %>%
+  filter(n >= 8) %>%
+  arrange(-n)
+
+a_identificacoes_3 <- 
+  bd$identificacoes %>%
+  filter(ID %in% top_ids$ID)  
+
+a_individuos_3 <- 
+  bd$individuos %>%
+  filter(id %in% top_ids$ID)
+
+a_saidas_3 <- 
+  bd$saidas %>%
+  filter(saida %in% a_identificacoes_3$saida) %>%
+  select(-wp_I, -wp_F, -litros_consumidos)
+
+a_amostragens_3 <- 
+  bd$amostragens %>%
+  filter(saida %in% a_identificacoes_3$saida) %>%
+  select(-wp_I, -wp_F)
+
+a_avistagens_3 <- 
+  bd$avistagens %>%
+  filter(str_c(saida, "_", grupo) %in% str_c(a_identificacoes_3$saida, "_", a_identificacoes_3$grupo)) %>%
+  select(-wp_I, -wp_F, -n_marcados, n_lisos)
+
+# a_climas_3 <- 
+#   bd$climas %>%
+#   filter(saida %in% a_identificacoes_3$saida) %>%
+#   select(-wp_I, -wp_F)
+
+```
+
+```{r salva_tudo}
+# TCC - 1
+write.xlsx(
+  x = as.data.frame(a_saidas_1),
+  file = out_1,
+  sheetName = "saidas",
+  append = FALSE,
+  row.names = FALSE
+)
+write.xlsx(
+  x = as.data.frame(a_amostragens_1),
+  file = out_1,
+  sheetName = "amostragens",
+  append = TRUE,
+  row.names = FALSE
+)
+write.xlsx(
+  x = as.data.frame(a_avistagens_1),
+  file = out_1,
+  sheetName = "avistagens",
+  append = TRUE,
+  row.names = FALSE
+)
+write.xlsx(
+  x = as.data.frame(a_climas_1),
+  file = out_1,
+  sheetName = "climas",
+  append = TRUE,
+  row.names = FALSE
+)
+
+# TCC - 2
+write.xlsx(
+  x = as.data.frame(a_saidas_2),
+  file = out_2,
+  sheetName = "saidas",
+  append = FALSE,
+  row.names = FALSE
+)
+write.xlsx(
+  x = as.data.frame(a_amostragens_2),
+  file = out_2,
+  sheetName = "amostragens",
+  append = TRUE,
+  row.names = FALSE
+)
+write.xlsx(
+  x = as.data.frame(a_avistagens_2),
+  file = out_2,
+  sheetName = "avistagens",
+  append = TRUE,
+  row.names = FALSE
+)
+write.xlsx(
+  x = as.data.frame(a_climas_2),
+  file = out_2,
+  sheetName = "climas",
+  append = TRUE,
+  row.names = FALSE
+)
+write.xlsx(
+  x = as.data.frame(a_fotos_2),
+  file = out_2,
+  sheetName = "fotos",
+  append = TRUE,
+  row.names = FALSE
+)
+
+# TCC - 3
+write.xlsx(
+  x = as.data.frame(a_saidas_3),
+  file = out_3,
+  sheetName = "saidas",
+  append = FALSE,
+  row.names = FALSE
+)
+write.xlsx(
+  x = as.data.frame(a_amostragens_3),
+  file = out_3,
+  sheetName = "amostragens",
+  append = TRUE,
+  row.names = FALSE
+)
+write.xlsx(
+  x = as.data.frame(a_avistagens_3),
+  file = out_3,
+  sheetName = "avistagens",
+  append = TRUE,
+  row.names = FALSE
+)
+write.xlsx(
+  x = as.data.frame(a_identificacoes_3),
+  file = out_3,
+  sheetName = "identificacoes",
+  append = TRUE,
+  row.names = FALSE
+)
+write.xlsx(
+  x = as.data.frame(a_individuos_3),
+  file = out_3,
+  sheetName = "individuos",
+  append = TRUE,
+  row.names = FALSE
+)
+```
+
+# TCC 1 - Eduarda
+
+## {data-width=200}
+
+### Memória da prosa
+- Dados até o presente
+- Organização Social:
+  - tamanho de grupo
+  - composição
+  - coesão (?)
+- Retornar excel multi-abas
+
+### O que eu (Eric) fiz:
+1. Do banco de dados, separei:
+  - Saidas, dados referentes ao dia, início e fim na marina (em geral)
+  - Amostragens, dados referentes à produra dos botos propriamente dita
+  - Climas, variáveis ambientais durante o período de amostragem
+  - Avistagens, dados sobre o grupo de boto avistado em campo
+2. Salvei cada uma dessas 4 informações em uma aba separada de um mesmo arquivo excel
+  
+## {data-width=800; .tabset}
+
+### Aba saidas
+```{r}
+a_saidas_1 %>% datatable()
+```
+
+### Aba amostragens
+```{r}
+a_amostragens_1 %>% datatable()
+```
+
+### Aba Clima
+```{r}
+a_climas_1  %>%  datatable()
+```
+
+### Aba Avistagens
+```{r}
+a_avistagens_1 %>% datatable()
+```
+
+# TCC 2 - Erica
+
+## {data-width=200}
+
+### Memória da prosa
+
+- Lama
+- 1 pasta com subpastas de IDs
+- Pegar saídas,
+- Pegar do banco,
+- Filtra por saídas
+- Retorna excel
+
+### O que eu (Eric) fiz:
+1. Recebi de Mari uma pasta (ATIPIAS) com subpastas (2023, 2024) com arquivos *.JPG
+2. Dos arquivos nesta pasta, peguei informações de dois lugares:
+  - Metadados do arquivo: datahora da foto, longitude e latitude
+  - Nomenclatura do arquivo: expedição, saida, e grupo
+3. Apliquei filtros no baco de dados:
+  - Filtro por saída, peguei todas informações de saídas que continham, ao mesnos uma fotografia na pasta passada.
+  - Filtro por saída, peguei todas informações de amostragens...
+  - Filtro por saída, peguei todas informações de climas...
+  - Filtro por saída e grupo, peguei todas informações de grupos...
+4. Dados finais são compostos por dados extraídos do arquivo e do banco de dados
+5. Salvei cada uma dessas 5 informações em uma aba separada de um mesmo arquivo excel
+
+## {data-width=800; .tabset}
+
+### Aba saidas
+```{r}
+a_saidas_2 %>% datatable()
+```
+
+### Aba amostragens
+```{r}
+a_amostragens_2 %>% datatable()
+```
+
+### Aba climas
+```{r}
+a_climas_2 %>% datatable()
+```
+
+### Aba avistagens
+```{r}
+a_avistagens_2 %>% datatable()
+```
+
+### Aba fotos
+```{r}
+a_fotos_2 %>% datatable()
+```
+
+# TCC 3 - Wesley
+
+## {data-width=200}
+
+### Memória da prosa
+
+- 8+ avistados
+- pegar banco e filtra:
+- pegar abas IDs + avistagens
+- retorna excel multi-abas
+- retornar as fotos
+
+### O que eu (Eric) fiz:
+1. Peguei do nosso banco de dados, nas tabelas de identificações:
+  - Contagens de do número identificações por saída, grupo e IDs
+  - Ordenei regressivamente
+  - Filtrei 8+, e criei uma lista de IDs com 8+ avistagens.
+2. Dos indivíduos nesta lista, peguei informações do banco de dados aplicando diferentes filtros:
+  - Filtro por saída, peguei todas informações de saídas que continham, ao mesnos um indivíduo do grupo dos 8+ avistado.
+  - Filtro por saída, peguei todas informações de amostragens...
+  - Filtro por saída e grupo, peguei todas informações de grupos...
+  - Filtro por indivíduo, peguei todas informações de indivíduos...
+  - Filtro por indivíduo, peguei todas informações de identificações...
+
+3. Salvei cada uma dessas 5 informações em uma aba separada de um mesmo arquivo excel
+
+## {data-width=800; .tabset}
+
+### Aba saidas
+```{r}
+a_saidas_3 %>% datatable()
+```
+
+### Aba amostragens
+```{r}
+a_amostragens_3 %>% datatable()
+```
+
+### Aba avistagens
+```{r}
+a_avistagens_3 %>% datatable()
+```
+
+### Aba identificações
+```{r}
+a_identificacoes_3 %>% datatable()
+```
+
+### Aba indivíduos
+```{r}
+a_avistagens_3 %>% datatable()
+```
+
