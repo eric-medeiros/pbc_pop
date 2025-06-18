@@ -33,8 +33,8 @@ pbc_pop/
 
 - **Linguagem:** R
 - **Pacotes principais:**  
-  `dplyr`, `tidyr`, `sf`, `ggplot2`, `secr`, `spatstat`, `raster`, `leaflet`, entre outros.
-- **Ambiente de análise:** RStudio + RMarkdown
+  `dplyr`, `tidyr`, `sf`, `ggplot2`, `RMark`, `spatstat`, `raster`, `leaflet`, entre outros.
+- **Ambiente de análise:** R + MARK
 
 ---
 
