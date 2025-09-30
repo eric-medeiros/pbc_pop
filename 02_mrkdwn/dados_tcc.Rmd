@@ -20,6 +20,7 @@ library(exiftoolr)
 library(dplyr)
 library(DT)
 library(xlsx)
+library(here)
 
 caminho_bd <- list.files(file.path("03_results", "01_BANCO"), "bd.rds", full.names = TRUE)
 bd <- readRDS(caminho_bd)
@@ -151,6 +152,30 @@ a_avistagens_3 <-
 #   filter(saida %in% a_identificacoes_3$saida) %>%
 #   select(-wp_I, -wp_F)
 
+pegar_fotos <- 
+  a_identificacoes_3 %>%
+  left_join(bd$caminhos, by = join_by("arquivo_sub" == "arquivo"), multiple = "first") %>%
+  mutate(caminho = here(pasta,arquivo_sub)) %>%
+  select(ID, caminho) %>%
+  group_by(ID)
+
+caminho_pasta_geral <- here("C:/Users/PBC-Pesquisa/Desktop/fotos_wesley")
+dir.create(caminho_pasta_geral)
+
+for (id in unique(a_identificacoes_3$ID)) {
+  
+  caminho_pasta_id <- here("C:/Users/PBC-Pesquisa/Desktop/fotos_wesley", id)
+  dir.create(caminho_pasta_id)
+  
+  fotos_id <- 
+    pegar_fotos %>%
+    filter(ID == id)
+  
+  for (foto in unique(fotos_id$caminho)) {
+    caminho_arquivo_foto <- here(caminho_pasta_id, basename(foto))
+    file.copy(foto, caminho_arquivo_foto, overwrite = TRUE)
+  }
+}
 ```
 
 ```{r salva_tudo}
