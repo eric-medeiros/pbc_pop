@@ -88,7 +88,7 @@ bd_le_planilha <- function(pasta_data) {
         read_excel(
           arquivo_excel,
           sheet = "individuos",
-          col_types = c("text", "text", "text", "text", "skip", "skip")),
+          col_types = c("text", "text", "text", "text", "skip")),
       
       "caminhos" = tibble(
         tipo = "planilha",

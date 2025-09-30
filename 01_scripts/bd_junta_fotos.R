@@ -8,7 +8,7 @@ bd_junta_fotos <- function(dados_excel_sub, dados_fotos) {
     filter(!is.na(grupo), !is.na(exp)) %>%
     mutate(data = as_date(data)) %>%
     select(saida, exp, grupo, ID = id, data, datahora, lng, lat, arquivo, quali_F = quali_f,
-           quali_M = quali_m, lado, filhote_ac, identificador, fotografa, obs, arquivo_sub, caminho)
+           quali_M = quali_m, lado, filhote_ac, identificadora, fotografa, obs, arquivo_sub, caminho)
   
   # Adicionando os resultados das identificações à lista dados_excel_sub$identificacoes
   dados_excel_sub$identificacoes <- dados_identificacoes_processadas %>% select(-caminho)

@@ -56,7 +56,8 @@ rs_arquivos_dia <- function(pasta_data, data_i, data_f) {
   res_arq <- info_scan %>%
     full_join(info_sonda, by = c("saida", "data")) %>%
     full_join(info_gps, by = c("saida", "data")) %>%
-    full_join(info_evidencias, by = c("saida", "data"))
+    full_join(info_evidencias, by = c("saida", "data")) %>%
+    mutate(saida = as.character(as.integer(saida)))
   
   return(res_arq)
 }

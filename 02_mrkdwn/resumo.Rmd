@@ -9,9 +9,9 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-data_i <- lubridate::dmy("01/12/2024")
-data_f <- lubridate::dmy("31/03/2025")
-atualiza_bd <- TRUE
+data_i <- lubridate::dmy("01/12/2022")
+data_f <- lubridate::dmy("01/12/2025") + 1
+atualiza_bd <- FALSE
 ```
 
 ```{r dados_banco, include=FALSE}
@@ -176,7 +176,7 @@ bd$wps %>%
 ```
 
 ### Rotas
-```{r rotas}
+```{r rotas, eval=FALSE}
 bd$rotas %>%
   filter(datahora_ROTA >= data_i,
          datahora_ROTA <= data_f) %>%
@@ -186,7 +186,7 @@ bd$rotas %>%
 ```
 
 ### Sondas
-```{r sonda}
+```{r sonda, eval=FALSE}
 bd$sonda %>%
   filter(datahora_SONDA >= data_i,
          datahora_SONDA <= data_f) %>%
@@ -200,7 +200,7 @@ Mapa (com filtro)
 
 ### MAPA
 ```{r mapa}
-res$resumo_leaflet
+# res$resumo_leaflet
 ```
 
 Dados Completos {.tabset}
