@@ -18,7 +18,7 @@ rs_refaz_resumo <- function(pasta_data, data_i, data_f, bd) {
   res_abas <- rs_abas_dia(pasta_data, data_i, data_f)
   res_bd <- rs_banco_dia(bd, data_i, data_f)
   res_geo <- rs_geo_dia(bd, data_i, data_f)
-  res_lfl <- rs_leaflet_dia(bd, data_i, data_f)
+  # res_lfl <- rs_leaflet_dia(bd, data_i, data_f)
   
   # Combinar resultados
   resumo_especifico <- res_bd %>%
@@ -52,6 +52,8 @@ rs_refaz_resumo <- function(pasta_data, data_i, data_f, bd) {
                str_pad(secs, 2, pad = "0"))
       },
       Grupos = sum(as.numeric(GRUPOS), na.rm = TRUE),
+      ID = sum(as.numeric(n_ID), na.rm = TRUE),
+      OC = sum(as.numeric(n_OC), na.rm = TRUE),
       Animais = sum(as.numeric(BOTOS), na.rm = TRUE),
       Fotos = sum(as.numeric(FOTOS), na.rm = TRUE)
     )
@@ -60,8 +62,8 @@ rs_refaz_resumo <- function(pasta_data, data_i, data_f, bd) {
     list(
       resumo_especifico = resumo_especifico,
       resumo_geral = resumo_geral,
-      resumo_geopackage = res_geo,
-      resumo_leaflet = res_lfl
+      # resumo_leaflet = res_lfl,
+      resumo_geopackage = res_geo
     )
   
   return(results)

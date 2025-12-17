@@ -13,6 +13,13 @@ rs_resumo <- function(pasta_outputs, data_i, data_f, pasta_data, bd) {
   
   res <- rs_refaz_resumo(pasta_data, data_i, data_f, bd)
   
+  res$resumo_especifico <- 
+    res$resumo_especifico %>%
+    rowwise() %>%
+    mutate(arquivo_sonda = str_flatten(arquivo_sonda)) %>%
+    select(arquivo_sonda)
+  
+  
   write.xlsx(res$resumo_especifico, caminho_xls, sheetName = "POR DIA", append = FALSE)
   write.xlsx(res$resumo_geral, caminho_xls, sheetName = "POR PERIODO", append = TRUE)
   st_write(res$resumo_geopackage$rotas_gpkg, dsn = caminho_gpkg, layer = "rotas", append = FALSE, quiet = TRUE)

@@ -16,7 +16,7 @@ library(RMark)
 library(DT)
 
 # Parâmetros Globais
-data_i <- lubridate::dmy("01/12/2022")
+data_i <- lubridate::dmy("01/01/2020")
 data_f <- lubridate::dmy("31/03/2025")
 atualiza_bd <- FALSE
 ```
@@ -46,10 +46,10 @@ resumo_modelos <- mr_analisa_modelos_otis(lista_resultados_modelos)
 
 # Resumo de dados
 
-Column {data-width=300}
--------------------------------------
+## Column {data-width="300"}
 
 ### Dados do excel e arquivos de fotos
+
 ```{r}
 dados_mr %>%
   ungroup() %>%
@@ -60,16 +60,17 @@ dados_mr %>%
   datatable()
 ```
 
-Column {data-width=200}
--------------------------------------
+## Column {data-width="200"}
 
 ### Histórico de Captura
+
 ```{r}
 dados_ch %>%
   datatable()
 ```
 
 # Resumo dos Modelos
+
 ```{r resumo}
 resumo_modelos %>%
   mutate(AICc = round(AICc, 2),
@@ -84,6 +85,7 @@ datatable()
 ```
 
 # Visualização
+
 ```{r analise_exploratoria}
 # Gráfico de avistagens por período
 dados_mr %>% 
@@ -94,6 +96,7 @@ dados_mr %>%
 ```
 
 # Correção via Theta
+
 ```{r theta_correction}
 resumo_corrigido <- 
   resumo_modelos %>%
@@ -110,50 +113,51 @@ resumo_corrigido %>%
 ```
 
 # NESSE TEM:
+
 O processo atual implementa modelos de marcação-recaptura (Closed Population) para estimar o tamanho populacional (N) do boto-cinza, utilizando dados de avistagens entre 2022 e 2025. Foram ajustados quatro modelos (M0, Mt, Mc, Mtc) via pacote RMark, comparando desempenho via AICc e pesos de evidência. As estimativas de N são corrigidas por um theta global (θ = proporção média de indivíduos marcados nos grupos), ajustando para detectabilidade incompleta. O dashboard resume:
 
-- Tabela interativa com rankings de modelos (ΔAICc, pesos).
+-   Tabela interativa com rankings de modelos (ΔAICc, pesos).
 
-- Gráfico de avistagens por período.
+-   Gráfico de avistagens por período.
 
-- Valores de N corrigidos com intervalos de confiança (95%).
+-   Valores de N corrigidos com intervalos de confiança (95%).
 
-- Resultados-chave incluem:
+-   Resultados-chave incluem:
 
-  - Modelo mais parcimonioso (menor AICc) identificado.
+    -   Modelo mais parcimonioso (menor AICc) identificado.
 
-  - Estimativas de população variando entre [valor mínimo] e [valor máximo] após correção.
-  
-  - **ÍNDICE DE SUPERDISPERSÃO:  `r resumo_corrigido %>% filter(Modelo_Nome == "M0") %>% pull(c_hat)`**
-  
-  - **LIMITE SUPERIOR IC95%: `r resumo_corrigido %>% filter(Modelo_Nome == "M0") %>% pull(N_lcl_corr) %>% round(2)`**
-  
-  - **LIMITE INFERIROR IC95%: `r resumo_corrigido %>% filter(Modelo_Nome == "M0") %>% pull(N_ucl_corr) %>% round(2)`**
+    -   Estimativas de população variando entre [valor mínimo] e [valor máximo] após correção.
 
-  - **ESTIMATIVA: `r resumo_corrigido %>% filter(Modelo_Nome == "M0") %>% pull(N_corr) %>% round(2)`**
-  
-  
+    -   **ÍNDICE DE SUPERDISPERSÃO: `r resumo_corrigido %>% filter(Modelo_Nome == "M0") %>% pull(c_hat)`**
+
+    -   **LIMITE SUPERIOR IC95%: `r resumo_corrigido %>% filter(Modelo_Nome == "M0") %>% pull(N_lcl_corr) %>% round(2)`**
+
+    -   **LIMITE INFERIROR IC95%: `r resumo_corrigido %>% filter(Modelo_Nome == "M0") %>% pull(N_ucl_corr) %>% round(2)`**
+
+    -   **ESTIMATIVA: `r resumo_corrigido %>% filter(Modelo_Nome == "M0") %>% pull(N_corr) %>% round(2)`**
+
 # FUTUROS TESTES:
-1. Validação de Pressupostos:
 
-  - Testar fechamento populacional formalmente (e.g., Teste de Stanley e Richards no MARK).
+1.  Validação de Pressupostos:
 
-  - Investigar heterogeneidade individual com modelos Heterogeneity (Mh) ou métodos de remoção (e.g., modelo Chao).
+-   Testar fechamento populacional formalmente (e.g., Teste de Stanley e Richards no MARK).
 
-2. Sensibilidade e Robustez:
+-   Investigar heterogeneidade individual com modelos Heterogeneity (Mh) ou métodos de remoção (e.g., modelo Chao).
 
-  - Simular cenários com taxas de marcação variáveis para avaliar impacto nas estimativas.
+2.  Sensibilidade e Robustez:
 
-  - Testar correções alternativas para θ (e.g., θ variável por período ou grupo).
+-   Simular cenários com taxas de marcação variáveis para avaliar impacto nas estimativas.
 
-3. Expansão de Modelos:
+-   Testar correções alternativas para θ (e.g., θ variável por período ou grupo).
 
-  - Incluir covariáveis ambientais (e.g., esforço amostral, condições climáticas) nos parâmetros p e c.
+3.  Expansão de Modelos:
 
-  - Explorar modelos Open Population se houver evidências de dinâmica populacional aberta.
+-   Incluir covariáveis ambientais (e.g., esforço amostral, condições climáticas) nos parâmetros p e c.
 
-4. Diagnósticos Avançados:
+-   Explorar modelos Open Population se houver evidências de dinâmica populacional aberta.
 
-  - Analisar resíduos de deviance para detectar overdispersion ou viés.
+4.  Diagnósticos Avançados:
 
-  - Comparar resultados com métodos não paramétricos (e.g., Jackknife).
+-   Analisar resíduos de deviance para detectar overdispersion ou viés.
+
+-   Comparar resultados com métodos não paramétricos (e.g., Jackknife).
