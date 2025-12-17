@@ -10,7 +10,7 @@ library(terra)
 pasta_proj <- rprojroot::find_rstudio_root_file()
 
 # 1.2: Lendo a camada da água (certifique-se que o script "2_Gerando_SHP.R" já foi executado)
-agua_sf <- st_read(file.path(pasta_proj, "00_data", "Agua.gpkg"))
+agua_sf <- st_read(file.path(pasta_proj, "00_data", "amostragem_area.gpkg"))
 
 # 1.3: Transformando para EPSG 32723 (UTM 23S)
 agua_proj <- st_transform(agua_sf, 32723)
@@ -22,7 +22,7 @@ agua_owin <- as.owin(agua_proj)
 
 # 2.1: Lendo o arquivo dos grupos (vetores em GPKG)
 grupos_sf <- st_read(file.path(pasta_proj, "03_results", "02_RESUMO",
-                               "resumo_2022-12-01_2025-03-31.gpkg"),
+                               "resumo_2020-01-01_2026-01-01.gpkg"),
                      layer = "pontos")
 
 # 2.2: Transformando para EPSG 32723 (UTM 23S)
