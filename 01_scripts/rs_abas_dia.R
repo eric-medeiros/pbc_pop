@@ -58,7 +58,7 @@ rs_abas_dia <- function(pasta_data, data_i, data_f) {
   
   # Aba "identificacoes"
   datas_ids <- 
-    read_excel(arquivo_excel, sheet = "identificacoes", skip = 3, col_types = c("text", "date", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text")) %>%
+    read_excel(arquivo_excel, sheet = "identificacoes", col_types = c("text", "date", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text")) %>%
     mutate(data = ymd(data)) %>%
     filter(data > data_i, data < data_f) %>%
     group_by(data) %>%

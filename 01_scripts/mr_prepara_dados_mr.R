@@ -3,6 +3,7 @@ mr_prepara_dados_mr <- function(bd, data_i, data_f) {
   
   result <- 
     bd$identificacoes %>%
+    rename(ID = id) %>%
     filter(between(data, data_i, data_f)) %>%
     group_by(ID) %>%
     mutate(avis = 1L,

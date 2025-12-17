@@ -43,7 +43,7 @@ rs_banco_dia <- function(bd, data_i, data_f) {
   
   # Resumo das avistagens
   res_avis <- bd$avistagens %>%
-    filter(datahora_I >= data_i, datahora_F <= data_f) %>%
+    filter(datahora_I >= data_i, datahora_I <= data_f) %>%
     mutate(
       tempo_grupo = as.numeric(difftime(datahora_F, datahora_I, units = "secs")),
       tam_grupo = nafill(as.integer(tam_grupo), fill = 0L) %>% suppressWarnings(),
@@ -64,6 +64,8 @@ rs_banco_dia <- function(bd, data_i, data_f) {
                str_pad(lubridate::second(periodo), 2, pad = "0"))
       },
       GRUPOS = n(),
+      n_ID = sum(oc_id == "ID"),
+      n_OC = sum(oc_id == "OC"),
       FOTOS = sum(as.integer(num_fotos), na.rm = TRUE)
     ) %>%
     arrange(as.numeric(saida))
@@ -73,7 +75,7 @@ rs_banco_dia <- function(bd, data_i, data_f) {
     filter(datahora >= data_i, datahora <= data_f) %>%
     group_by(saida) %>%
     summarise(
-      IDs = n_distinct(ID)
+      IDs = n_distinct(id)
     )
   
   # Resumo final combinando todas as informações
@@ -98,6 +100,8 @@ rs_banco_dia <- function(bd, data_i, data_f) {
       T_BARCO,
       T_BOTO,
       GRUPOS,
+      n_OC,
+      n_ID,
       BOTOS,
       FOTOS,
       LITROS = litros_consumidos,

@@ -77,8 +77,7 @@ bd_le_planilha <- function(pasta_data) {
         read_excel(
           arquivo_excel,
           sheet = "identificacoes",
-          col_types = c("text", "date", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text"),
-          skip = 3
+          col_types = c("text", "date", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text", "text")
         ) %>%
         mutate(
           data = ymd(data),
@@ -88,7 +87,7 @@ bd_le_planilha <- function(pasta_data) {
         read_excel(
           arquivo_excel,
           sheet = "individuos",
-          col_types = c("text", "text", "text", "text", "skip")),
+          col_types = c("text", "text", "text", "text", "text", "skip", "skip", "skip", "skip", "text")),
       
       "caminhos" = tibble(
         tipo = "planilha",

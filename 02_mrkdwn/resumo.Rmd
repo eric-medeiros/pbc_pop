@@ -9,8 +9,8 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-data_i <- lubridate::dmy("01/12/2022")
-data_f <- lubridate::dmy("01/12/2025") + 1
+data_i <- lubridate::dmy("01/01/2020")
+data_f <- lubridate::dmy("31/12/2025") + 1
 atualiza_bd <- FALSE
 ```
 
@@ -209,11 +209,11 @@ Dados Completos {.tabset}
 Row {.tabset .tabset-pills}
 -----------------------------------------------------------------------
 
-```{r}
+```{r }
 # Função para calcular as estatísticas e retornar as tabelas
 pp_stats <- function(bd) {
   historico_dia <- bd$identificacoes %>%
-    dplyr::select(saida, exp, ID, data) %>%
+    dplyr::select(saida, exp, ID = id, data) %>%
     unique() %>% 
     dplyr::select(ID, data) %>%
     mutate(avis = 1L) %>%
@@ -264,7 +264,7 @@ pp_stats <- function(bd) {
   
   top_ids <-
     bd$identificacoes %>%
-    select(saida, ID, data) %>%
+    select(saida, ID = id, data) %>%
     unique() %>%
     group_by(ID) %>%
     summarise(

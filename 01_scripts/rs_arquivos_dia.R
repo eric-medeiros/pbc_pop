@@ -28,7 +28,7 @@ rs_arquivos_dia <- function(pasta_data, data_i, data_f) {
            saida = str_sub(pasta, 1, 3)) %>%
     filter(data > data_i, data < data_f) %>%
     rowwise() %>%
-    mutate(arquivo_trajecto = list.files(caminho, pattern = "Trajecto_\\d{4}-\\d{2}-\\d{2} \\d{6}.gpx"),
+    mutate(arquivo_trajecto = list(list.files(caminho, pattern = "Trajecto_\\d{4}-\\d{2}-\\d{2} \\d{6}.gpx")),
            arquivo_wp = list.files(caminho, pattern = "Pontos de passagem_\\d{2}-[A-Z]{3}-\\d{2}.gpx")) %>%
     select(saida, data, arquivo_trajecto, arquivo_wp)
   
@@ -39,7 +39,7 @@ rs_arquivos_dia <- function(pasta_data, data_i, data_f) {
            saida = str_sub(pasta, 1, 3)) %>%
     filter(data > data_i, data < data_f) %>%
     rowwise() %>%
-    mutate(arquivo_sonda = list.files(caminho, pattern = ".xls")) %>%
+    mutate(arquivo_sonda = list(list.files(caminho, pattern = ".xls"))) %>%
     select(saida, data, arquivo_sonda)
   
   # Carregar e processar informações de evidências
